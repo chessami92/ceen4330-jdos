@@ -7,7 +7,7 @@ mStoreDoubleWord macro
    xchg ax,bx
    stosw             ;second store the segment bx
    xchg ax,bx
-endm
+#em
 
 ;inputs:    none
 ;outputs:   none
@@ -55,7 +55,7 @@ storeDefault:
    pop cx
    pop bx
    pop ax
-endm
+#em
 
 ;inputs:    none
 ;outputs:   ss - set to a valid point in ram
@@ -64,18 +64,19 @@ mInitializeStackPointer macro
    mov ax,1000h      ;start at highest RAM address
    mov ss,ax
    xor sp,sp         ;point to top of stack
-endm
+#em
 
 ;inputs:    none
 ;outputs:   none, sets up display for use
 mInitializeDisplay macro
-
-endm
+   and al,11h
+#em
 
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
-pJdos proc far
+org 1234h
+pJdosInit proc far
    mInitializeStackPointer
 
    mLoadInterruptVectorTable
@@ -83,4 +84,4 @@ pJdos proc far
    mInitializeDisplay
     
    ret               ;included for consistency, but never reached 
-pJdos endp
+pJdosInit endp
