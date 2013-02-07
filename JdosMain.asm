@@ -75,7 +75,6 @@ mInitializeDisplay macro
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
-org 1234h
 pJdosInit proc far
    mInitializeStackPointer
 

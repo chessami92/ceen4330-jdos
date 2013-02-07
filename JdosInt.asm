@@ -4,7 +4,7 @@
 ;outputs:   al - input character
 mInputWithEcho macro
    
-endm
+#em
 
 ;inputs:    dl - character to output
 ;outputs:   none
@@ -16,7 +16,7 @@ pOutputCharacter endp
 ;outputs:   al - input character
 mInputWithoutEcho macro
    
-endm
+#em
 
 ;inputs:    ds:dx - string address
 ;outputs:   none - prints until a $ is encountered
@@ -29,15 +29,15 @@ mStringOutput macro
 printCharacter:
    lodsb
    cmp al,'$'
-   je done
+   je outputStringComplete
    mov dl,al
    call pOutputCharacter
    jmp printCharacter
 
-done:
+outputStringComplete:
    pop si
    pop ax
-endm
+#em
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
@@ -59,9 +59,9 @@ checkInputWithoutEcho:
 
 checkStringOutput:
    cmp ah,09h
-   jne done
+   jne osInterruptComplete
    mStringOutput
 
-done:
+osInterruptComplete:
    iret
 int21h endp
