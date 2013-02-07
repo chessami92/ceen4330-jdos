@@ -4,15 +4,15 @@
 ;outputs:   none, screen is cleared
 mScrollWindowUp macro
    
-end
+#em
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int10h proc far
    cmp ah,06h
-   jne done
+   jne videoInterruptComplete
    mScrollWindowUp
 
-done:
+videoInterruptComplete:
    iret
 int10h endp
