@@ -1,61 +1,3 @@
-;inputs:    ax - first to store
-;           bx - second to store
-;           es:di - location to store
-;outputs:   none
-mStoreDoubleWord macro
-   stosw             ;first store the offset ax
-   xchg ax,bx
-   stosw             ;second store the segment bx
-   xchg ax,bx
-#em
-
-;inputs:    none
-;outputs:   none
-mLoadInterruptVectorTable macro
-   push ax
-   push bx
-   push cx
-   push es
-   push di
-
-   xor ax,ax      ;clear es:di for setting up default interrupts
-   mov es,ax
-   xor di,di
-
-   ;bx:ax is the address of default: simply an iret command
-   mov ax,1234h
-   mov bx,5678h
-   mov cx,256        ;number of interrupts
-
-   cld               ;increment si on stosw
-
-storeDefault:
-   mStoreDoubleWord
-   loop storeDefault
-
-   mov di,40h        ;int 10h
-   mov ax,1234h
-   mov bx,1234h
-   mStoreDoubleWord
-
-   mov di,68h        ;int 1ah
-   mov ax,1234h
-   mov bx,5678h
-   mStoreDoubleWord
-   
-   mov di,84h        ;int 21h
-   mov ax,1234h
-   mov bx,5678h
-   mStoreDoubleWord
-
-   sti               ;allow interrupts now that IVT is initialized
-
-   pop di
-   pop es
-   pop cx
-   pop bx
-   pop ax
-#em
 
 ;inputs:    none
 ;outputs:   ss - set to a valid point in ram
@@ -67,9 +9,21 @@ mInitializeStackPointer macro
 #em
 
 ;inputs:    none
-;outputs:   none, sets up display for use
-mInitializeDisplay macro
-   and al,11h
+;outputs:   none
+mLoadInterruptVectorTable macro
+   push es,ds,di,si,cx
+
+   xor cx,cx
+   mov es,cx         ;point to beginning of RAM
+   mov di,cx
+   mov ds,0f000h     ;point to beginning of ROM
+   mov si,offset interruptTable
+
+   mov cx,512        ;how many words in the IVT
+   
+   sti               ;allow interrupts now that IVT is initialized
+
+   pop cx,si,di,ds,es
 #em
 
 ;First point of entry for the microprocessor.
@@ -80,7 +34,8 @@ pJdosInit proc far
 
    mLoadInterruptVectorTable
      
-   mInitializeDisplay
+   xor ah,ah         ;initialize the display
+   int 10h
     
    ret               ;included for consistency, but never reached 
 pJdosInit endp
