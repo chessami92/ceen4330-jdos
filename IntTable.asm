@@ -1,8 +1,16 @@
-org 0fbf0
-
-interruptTable dw defaultInterrupt, 0f000h
-   dw 14 DUP (defaultInterrupt, 0f000h),
+;each mapping in this table takes 5 bytes: 1 for which interrupt,
+;4 for the CS and IP of the interrupt
+interruptTable:
+   db 05h            ;print screen
    dw int10h, 0f000h
-   dw 16 DUP (defaultInterrupt, 0f000h)
+   db 09h,           ;keyboard hardware
+   dw int09h, 0f000h,
+   db 12h,           ;memory check
+   dw defaultInterrupt, 0f000h,
+   db 16h,           ;keyboard service
+   dw int16h, 0f000h,
+   db 1Ah,           ;real time clock
+   dw defaultInterrupt, 0f000h,
+   db 21h,           ;JDOS function calls
    dw int21h, 0f000h
-   dw 223 DUP (defaultInterrupt, 0f000h)
+endInterruptTable:
