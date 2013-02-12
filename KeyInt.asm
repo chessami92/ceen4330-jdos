@@ -13,6 +13,7 @@ int09h proc far
    mov al,ah
    mov bx,offset scanAsciiTable
    xlat              ;convert al to ASCII
+   mov B[keyboardCommand],11100000b ;end the interrupt request
 
    iret
 int09h endp
