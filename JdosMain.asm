@@ -58,7 +58,7 @@ pJdosInit proc far
    mLoadInterruptVectorTable
      
    xor ah,ah         ;initialize the display
-   int 10h
+   int 05h
     
    ret               ;included for consistency, but never reached 
 pJdosInit endp

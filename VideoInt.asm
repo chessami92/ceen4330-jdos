@@ -38,7 +38,7 @@ mOutputToScreenWithDelay macro
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
-int10h proc far
+int05h proc far
 checkInitializeDisplay:
    push ds
 
@@ -57,7 +57,7 @@ checkScrollWindowUp:
 videoInterruptComplete:
    pop ds
    iret
-int10h endp
+int05h endp
 
 ;inputs:    al=00
 ;outputs:   none, screen is cleared

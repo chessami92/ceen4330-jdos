@@ -32,7 +32,7 @@ checkKeyboardInitialization:
    
 keyboardInterruptComplete:
    iret
-int10h endp
+int16h endp
 
 ;inputs:    none
 ;outputs:   ah - key scan code
