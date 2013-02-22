@@ -1,7 +1,4 @@
 ;Keyboard service requests
-keyboardSegment EQU 1000h
-keyboardData EQU 0002h
-keyboardCommand EQU 0004h
 
 scanAsciiTable db '0123456789ABCDEF'
 ;called by hardware when character is available

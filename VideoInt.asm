@@ -1,8 +1,6 @@
 ;Video service requets. 
-lcdSegment EQU 2000h
-lcdOffset EQU 0000h
-msDelay EQU 291
 
+msDelay EQU 291
 ;inputs:    none
 ;outputs:   none, continues after 1ms
 mDelayOneMs macro
