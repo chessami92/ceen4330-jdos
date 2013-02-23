@@ -48,6 +48,18 @@ storeDefinedInterrupts:
    pop cx,bx,ax,si,di,ds,es
 #em
 
+mInitializeInterruptController macro
+   push ax,ds
+
+   mov ax,intControllerSegment
+   mov ds,ax
+   ;edge triggered, single, no ICW4 needed 
+   mov B[intCommand1],00011010b
+   mov B[intCommand2],00001000b
+
+   pop ds,ax
+#em
+
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
@@ -56,6 +68,8 @@ pJdosInit proc far
 
    mLoadInterruptVectorTable
 
+   mInitializeInterruptController
+   
    mov ah,04h        ;initialize the keyboard
    int 16h
      

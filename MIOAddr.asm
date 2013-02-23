@@ -9,3 +9,7 @@ keyboardCommand EQU 0002h     ;command port of 8279
 
 lcdSegment EQU 2000h          ;address of LCD
 lcdOffset EQU 0000h           ;offset of LCD
+
+intControllerSegment EQU 3000h;address of interrupt controller
+intCommand1 EQU 0000h         ;offset for commands
+intCommand2 EQU 0002h         ;offset for second type of command

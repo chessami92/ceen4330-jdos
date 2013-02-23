@@ -59,6 +59,10 @@ int09h proc far
 
    mInsertIfNotFull
 
+   ;end interrupt mode for the interrupt controller
+   mov bx,intController
+   mov B[intCommand],00100001b
+
    pop ds,bx
    iret
 int09h endp
