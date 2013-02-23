@@ -54,8 +54,8 @@ mInitializeInterruptController macro
    mov ax,intControllerSegment
    mov ds,ax
    ;edge triggered, single, no ICW4 needed 
-   mov B[intCommand1],00011010b
-   mov B[intCommand2],00001000b
+   mov B[intCommand1],00011010xb
+   mov B[intCommand2],00001000xb
 
    pop ds,ax
 #em
@@ -77,6 +77,11 @@ pJdosInit proc far
    int 05h
 
    sti               ;allow interrupts now that IVT is initialized
+
+   call pOutputToLeds
+
+stall:
+   jmp stall
 
    ret               ;included for consistency, but never reached 
 pJdosInit endp
