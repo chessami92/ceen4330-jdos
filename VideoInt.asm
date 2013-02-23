@@ -1,8 +1,6 @@
 ;Video service requets. 
-lcdSegment EQU 2000h
-lcdOffset EQU 0000h
-msDelay EQU 291
 
+msDelay EQU 291
 ;inputs:    none
 ;outputs:   none, continues after 1ms
 mDelayOneMs macro
@@ -40,12 +38,12 @@ mOutputToScreenWithDelay macro
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
-int10h proc far
-checkInitializeDisplay:
+int05h proc far
    push ds
 
    mov ds,lcdSegment
 
+checkInitializeDisplay:
    cmp ah,00h
    jne checkScrollWindowUp
    call pInitializeDisplay
@@ -59,7 +57,7 @@ checkScrollWindowUp:
 videoInterruptComplete:
    pop ds
    iret
-int10h endp
+int05h endp
 
 ;inputs:    al=00
 ;outputs:   none, screen is cleared

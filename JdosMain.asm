@@ -3,9 +3,9 @@
 ;outputs:   ss - set to a valid point in ram
 ;           sp - points
 mInitializeStackPointer macro
-   mov ax,1000h      ;start at highest RAM address
+   xor ax,ax         ;stack segment in RAM
    mov ss,ax
-   xor sp,sp         ;point to top of stack
+   mov sp,stackBegin ;point to top of stack
 #em
 
 ;inputs:    none
@@ -44,9 +44,20 @@ storeDefinedInterrupts:
    cmp si,endInterruptTable ;see if we have reached end of IVT entries
    jne storeDefinedInterrupts
     
-   sti               ;allow interrupts now that IVT is initialized
 
    pop cx,bx,ax,si,di,ds,es
+#em
+
+mInitializeInterruptController macro
+   push ax,ds
+
+   mov ax,intControllerSegment
+   mov ds,ax
+   ;edge triggered, single, no ICW4 needed 
+   mov B[intCommand1],00011010xb
+   mov B[intCommand2],00001000xb
+
+   pop ds,ax
 #em
 
 ;First point of entry for the microprocessor.
@@ -56,9 +67,21 @@ pJdosInit proc far
    mInitializeStackPointer
 
    mLoadInterruptVectorTable
+
+   mInitializeInterruptController
+   
+   mov ah,04h        ;initialize the keyboard
+   int 16h
      
    xor ah,ah         ;initialize the display
-   int 10h
-    
+   int 05h
+
+   sti               ;allow interrupts now that IVT is initialized
+
+   call pOutputToLeds
+
+stall:
+   jmp stall
+
    ret               ;included for consistency, but never reached 
 pJdosInit endp

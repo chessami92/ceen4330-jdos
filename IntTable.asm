@@ -2,7 +2,7 @@
 ;4 for the CS and IP of the interrupt
 interruptTable:
    db 05h            ;print screen
-   dw int10h, 0f000h
+   dw int05h, 0f000h
    db 09h,           ;keyboard hardware
    dw int09h, 0f000h,
    db 12h,           ;memory check
