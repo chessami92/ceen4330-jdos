@@ -39,11 +39,11 @@ mOutputToScreenWithDelay macro
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int05h proc far
-checkInitializeDisplay:
    push ds
 
    mov ds,lcdSegment
 
+checkInitializeDisplay:
    cmp ah,00h
    jne checkScrollWindowUp
    call pInitializeDisplay
