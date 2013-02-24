@@ -1,40 +1,84 @@
 ;Video service requets. 
+;Screen hardware: X, E, RS, R/W~, D7-D4
 
-msDelay EQU 291
-;inputs:    none
-;outputs:   none, continues after 1ms
-mDelayOneMs macro
-   push cx
-
-   even           ;force assembler to align on even space
-   mov cx,msDelay
-fiveCCDelay:
-   ;delay = .2us * (17 * cx + 11 + 4 + 5 + 8)
-   loop fiveCCDelay ;17/5
-
-   pop cx
-#em
-
-;inputs:    cx - number of ms to wait
-;outputs:   none, returns after cx ms
-pDelayMs proc near
-   push cx
-
-delayCxMs:
-   mDelayOneMs
-   loop delayCxMs
-
-   pop cx
+;inputs:    al=00
+;outputs:   none, screen is cleared
+pScrollWindowUp proc near
    ret
-delayMs endp
+pScrollWindowUp endp
 
-;inputs:    data to send and the delay in ms required
-mOutputToScreenWithDelay macro
+;inputs:    command code to send
+;outputs:   sends command with 40us of delay
+mOutputCommand macro
    mov al,#1
-   call pOutputToScreen
-   mov cx,#2
-   call pDelayMs
+   call pOutputCommand
+   mDelay40us
 #em
+
+;inputs:    al - the decoded byte to send to the screen
+;           ds - the LCD segment
+;outputs:   none, al sent to screen with enable
+mOutputDecodedByte macro
+   or al,01000000xb  ;send data with enable
+   mov [lcdOffset],al
+
+   nop               ;make sure data is latched
+   nop
+   and al,10111111xb ;send data without enable 
+   mov [lcdOffset],al
+#em
+
+;inputs:    al - the command to be sent to the screen
+;outputs    none, al sent to the screen
+pOutputCommand proc near
+   push ax
+
+   shr al,1
+   shr al,1
+   shr al,1
+   shr al,1
+   mOutputDecodedByte
+
+   nop               ;wait before sending next data
+   nop
+   nop
+
+   pop ax            ;refresh ax
+   push ax
+   and al,0fh        ;clear upper nibble 
+   mOutputDecodedByte
+
+   pop ax
+   ret
+pOutputCommand endp
+
+;inputs:    none
+;outputs:   none, display initialized and ready to use
+pInitializeDisplay proc near
+   push ax,ds
+
+   mov ax,lcdSegment
+   mov ds,ax
+
+   mDelayMs 15          ;must to wait 15ms before setup is allowed
+   
+   mOutputCommand 30h   ;base initialization
+   mDelayMs 5
+   mOutputCommand 30h
+   mDelay40us
+   mDelay40us
+   mOutputCommand 30h
+
+   mOutputCommand 28h   ;function set to 4-bit interface, 5x8 dot font
+   mOutputCommand 08h   ;display off
+   mOutputCommand 01h   ;clear display
+   mDelayMs 2
+   mOutputCommand 0fh   ;display on, blinking cursor
+   mOutputCommand 06h   ;entry mode, auto-increment
+   
+   pop ax,ds
+   ret
+pInitializeDisplay endp
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
@@ -58,72 +102,3 @@ videoInterruptComplete:
    pop ds
    iret
 int05h endp
-
-;inputs:    al=00
-;outputs:   none, screen is cleared
-pScrollWindowUp proc near
-   ret
-pScrollWindowUp endp
-
-;inputs:    ah - the control signals, set bit 5 to 1 for data, 0 for command
-;              all other bits are required to be 0
-;           al - lower nibble sent to screen
-;outputs:   none, lower nibble sent to screen
-mOutputNibble macro
-   or al,ah          
-   mov [lcdOffset],al;send data without enable, RS = passed value
-   or al,01000000xb  ;send data with enable
-   mov [lcdOffset],al
-   nop               ;make sure data is latched
-   nop
-   and al,10111111xb  
-   mov [lcdOffset],al;send data without enable
-#em
-
-;inputs:    ah - the control signals, set bit 5 to 1 for data, 0 for command
-;           al - the data to be sent to the screen
-;outputs:   none, dl sent to screen, upper nibble then lower
-pOutputToScreen proc near
-   ;screen is set up: lower nibble is d7-d4, 
-   ;upper nibble is don't care, then E, RS, R/W~
-   push ax
-
-   shr al,1          ;take upper nibble to bottom
-   shr al,1
-   shr al,1
-   shr al,1
-   mOutputNibble
-   nop               ;wait before sending next data
-   nop
-   nop
-   pop ax            ;refresh ax
-   push ax
-   and al,0fh        ;clear upper nibble, already sent it
-   mOutputNibble
-
-   pop ax
-   ret
-pOutputToScreen endp
-
-;inputs:    none
-;outputs:   none, display initialized and ready to use
-pInitializeDisplay proc near
-   push ax, cx
-
-   mov cx,15         ;have to wait 15ms before setup is allowed
-   call pDelayMs
-   
-   mov ah,00100000b  ;code to send data
-
-   mOutputToScreenWithDelay 30h, 16
-   mOutputToScreenWithDelay 30h, 4
-   mOutputToScreenWithDelay 30h, 1
-   mOutputToScreenWithDelay 38h, 1
-   mOutputToScreenWithDelay 08h, 1 
-   mOutputToScreenWithDelay 01h, 2
-   mOutputToScreenWithDelay 0ch, 1
-   mOutputToScreenWithDelay 06h, 1
-   
-   pop cx, ax
-   ret
-pInitializeDisplay endp
