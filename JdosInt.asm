@@ -6,12 +6,6 @@ mInputWithEcho macro
    
 #em
 
-;inputs:    dl - character to output
-;outputs:   none
-pOutputCharacter proc near
-   
-pOutputCharacter endp
-
 ;inputs:    none
 ;outputs:   al - input character
 mInputWithoutEcho macro
@@ -44,13 +38,8 @@ outputStringComplete:
 int21h proc far
 checkInputWithEcho:
    cmp ah,01h
-   jne checkOutputCharacter
-   mInputWithEcho
-
-checkOutputCharacter:
-   cmp ah,02h
    jne checkInputWithoutEcho
-   call pOutputCharacter
+   mInputWithEcho
 
 checkInputWithoutEcho:
    cmp ah,07h

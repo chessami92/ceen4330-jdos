@@ -1,12 +1,6 @@
 ;Video service requets. 
 ;Screen hardware: X, E, RS, R/W~, D7-D4
 
-;inputs:    al=00
-;outputs:   none, screen is cleared
-pScrollWindowUp proc near
-   ret
-pScrollWindowUp endp
-
 ;inputs:    command code to send
 ;outputs:   sends command with 40us of delay
 mOutputCommand macro
@@ -80,6 +74,40 @@ pInitializeDisplay proc near
    ret
 pInitializeDisplay endp
 
+;inputs:    dh - row (00h is top)
+;           dl - column (0-19)
+;outputs:   cursor changed to position dh:dl
+pSetCursorPosition proc near
+   ret
+pSetCursorPosition endp
+
+;inputs:    none
+;outputs:   dh - row (00h is top)
+;           dl - column (0-19)
+pGetCursorPosition proc near
+   ret
+pGetCursorPosition endp
+
+;inputs:    al - number of lines to scroll up,
+;              al=00h means to clear display
+;outputs:   none - does not update cursor
+pScrollWindowUp proc near
+   ret
+pScrollWindowUp endp
+
+;inputs:    al - number of lines to scroll down
+;outputs:   none - does not update cursor
+pScrollWindowDown proc near
+   ret
+pScrollWindowDown endp
+
+;inputs:    al - the character to print
+;outputs:   character put on display
+;           if cursor is not currently visible, screen scrolled to cursor first
+pOutputCharacter proc near 
+   ret
+pOutputCharacter endp
+
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int10h proc far
@@ -89,14 +117,38 @@ int10h proc far
 
 checkInitializeDisplay:
    cmp ah,00h
-   jne checkScrollWindowUp
+   jne checkSetCursorPosition
    call pInitializeDisplay
+   jmp videoInterruptComplete
+
+checkSetCursorPosition:
+   cmp ah,02h
+   jne checkGetCursorPosition
+   call pSetCursorPosition
+   jmp videoInterruptComplete
+
+checkGetCursorPosition:
+   cmp ah,03h
+   jne checkScrollWindowUp
+   call pGetCursorPosition
    jmp videoInterruptComplete
 
 checkScrollWindowUp:
    cmp ah,06h
-   jne videoInterruptComplete
+   jne checkScrollWindowDown
    call pScrollWindowUp
+   jmp videoInterruptComplete
+
+checkScrollWindowDown:
+   cmp ah,07h
+   jne checkOutputCharacter
+   call pScrollWindowDown
+   jmp videoInterruptComplete
+
+checkOutputCharacter:
+   cmp ah,09h
+   jne videoInterruptComplete
+   call pOutputCharacter
 
 videoInterruptComplete:
    pop ds
