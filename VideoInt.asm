@@ -82,7 +82,7 @@ pInitializeDisplay endp
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
-int05h proc far
+int10h proc far
    push ds
 
    mov ds,lcdSegment
@@ -101,4 +101,4 @@ checkScrollWindowUp:
 videoInterruptComplete:
    pop ds
    iret
-int05h endp
+int10h endp
