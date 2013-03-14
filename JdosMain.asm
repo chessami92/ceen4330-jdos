@@ -53,9 +53,12 @@ mInitializeInterruptController macro
 
    mov ax,intControllerSegment
    mov ds,ax
-   ;edge triggered, single, no ICW4 needed 
-   mov B[intCommand1],00011010xb
-   mov B[intCommand2],00001000xb
+
+   mov B[intCommand1],00011011xb ;level triggered, single, ICW4 needed 
+   mov B[intCommand2],00001000xb ;start address of 08h
+   mov B[intCommand2],00000011xb ;auto EOI, 8086 uP
+
+   mov B[intCommand2],11111100xb ;ignore interrupts 2-7 as they are not connected
 
    pop ds,ax
 #em
@@ -64,6 +67,8 @@ mInitializeInterruptController macro
 ;inputs:    none
 ;outputs:   none
 pJdosInit proc far
+   cli               ;make sure no interrupts while initializing
+
    mInitializeStackPointer
 
    mLoadInterruptVectorTable
