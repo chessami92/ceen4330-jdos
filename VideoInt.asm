@@ -49,9 +49,10 @@ pInitializeDisplay proc near
    mov es,ax
    mov di,cursorColumn
 
-   stosw             ;clear cursor position for video display
-   mov ax,0300h      ;last row printed is 3rd row, current row is 0th row
-   stosw
+   stosw             ;cursor is at row 0, column 0
+   stosb             ;current row is 0
+   mov al,03h        ;last row printed is 3
+   stosb
 
    mov ax,2020h      ;set all display bytes to space
    mov cx,140h
@@ -101,6 +102,7 @@ pScrollWindowDown endp
 ;           if cursor is not currently visible, screen scrolled to cursor first
 pOutputCharacter proc near 
    ;TODO: make sure cursor is visible on screen
+   ;TODO: check line wrappings on cursor
    push ax,dx
 
    call pGetCursorPosition
