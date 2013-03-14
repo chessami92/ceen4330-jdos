@@ -90,14 +90,12 @@ int16h endp
 ;outputs:   ah - key scan code
 ;           al - ASCII character
 pReadCharacter proc near
-   xor ax,ax
+   push ax,ds
+   mov ds,keyboardSegment
    
-waitForKeyboardInterrupt:
-   sti               ;allow interrupts for one instruction, avoids
-   cli               ;possible issue when multiple characters waiting
-   cmp ax,0          ;once keyboard interrupt occurs, ax will not be 0
-   je waitForKeyboardInterrupt
+   ;TODO: read from character queue in RAM
    
+   pop ds,ax
    ret               ;got character, return to caller
 pReadCharacter endp
 
@@ -109,9 +107,10 @@ pInitializeKeyboard proc near
 
    mov B[keyboardCommand],00000001b ;set to decoded scan keyboard
    mov B[keyboardCommand],00111001b ;set to 25 prescaler to get 100kHz clock
-   mov B[keyboardCommand],01000000b ;setup to read character queue
+   mov B[keyboardCommand],10100000b ;do not mast display nibbles
+   mov B[keyboardCommand],11000001b ;clear FIFO and RAM
   
-   xor ax,ax         ;set up head and tail pointer for queue
+   xor ax,ax         ;set up head and tail pointer for RAM key queue
    mov ds,ax
    mov B[keyboardQueue],0Eh
 
