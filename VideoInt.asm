@@ -98,7 +98,7 @@ pInitializeDisplay proc near
    mov ax,lcdSegment
    mov ds,ax
 
-   mDelayMs 15          ;must to wait 15ms before setup is allowed
+   mDelayMs 15       ;must to wait 15ms before setup is allowed
    
    mOutputScreenCommand 30h   ;base initialization
    mDelayMs 5
@@ -271,18 +271,18 @@ pValidateRowAndColumn endp
 pConvertToRamOffset proc near
    push ax,dx
 
-   xor bx,bx      ;clear bx
-   mov bl,dh      ;put row in bx
+   xor bx,bx         ;clear bx
+   mov bl,dh         ;put row in bx
    
-   shl bx,1       ;multiply by 4
+   shl bx,1          ;multiply by 4
    shl bx,1
    mov ax,bx
-   shl bx,1       ;multiply by 4 again
+   shl bx,1          ;multiply by 4 again
    shl bx,1
-   add bx,ax      ;16*dh+4*dh
+   add bx,ax         ;16*dh+4*dh
 
-   xor dh,dh      ;clear row to only have column
-   add bx,dx      ;add in column
+   xor dh,dh         ;clear row to only have column
+   add bx,dx         ;add in column
 
    add bx,screenData ;shift by starting offset
 
