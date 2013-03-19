@@ -4,7 +4,7 @@ stackBegin EQU 0fd60h         ;top of stack - goes into SP, SS = 0
 cursorColumn EQU 0fd6ch       ;location in RAM where next character will be printed
 cursorRow EQU 0fd6dh
 currentPrintRow EQU 0fd6eh    ;location in RAM of starting character on LCD - 4 rows are displayed
-lastScreenPrinted EQU 0fd6fh  ;last screen that has been used - after 4 rows is oldest row (will be overwritten next)
+lastScreenUsed EQU 0fd6fh     ;last screen that has been used - after 4 rows is oldest row (will be overwritten next)
 screenData EQU 0fd70h         ;32 lines of 20 character, or 280h bytes of video data
 
 keyboardPointers EQU 0fff0h   ;meta-data for queue

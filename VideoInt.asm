@@ -70,7 +70,7 @@ checkScrollWindowUp:
 
 checkScrollWindowDown:
    cmp ah,07h
-   jne checkOutputCharacter
+   jne checkPrintCharacterToRam
    call pScrollWindowDown
    jmp videoInterruptComplete
 
@@ -159,7 +159,6 @@ pGetCursorPosition endp
 ;              al=00h means to clear display
 ;outputs:   none - does not update cursor
 pScrollWindowUp proc near
-   ;TODO: show or hide cursor as necessary
    ret
 pScrollWindowUp endp
 
@@ -170,7 +169,8 @@ pScrollWindowDown proc near
    ret
 pScrollWindowDown endp
 
-;inputs:    al - the character to print
+;inputs:    ds - RAM segment
+;           al - the character to print
 ;              if al = 0ah, then spaces are put in RAM til EOL
 ;outputs:   character put in display RAM
 ;           if cursor is not currently visible, screen scrolled to cursor first
@@ -198,7 +198,22 @@ nonNewLine:
    inc dl            ;increment column
 
 characterInRam:
-   call pSetCursorPosition     ;update cursor position
+   call pSetCursorPosition ;update cursor position
+
+   mov bh,[lastScreenUsed] ;validate what screen is currently being used.
+   sub dh,bh
+   jns doNotAdd20h
+   add dh,20h
+doNotAdd20h:
+   cmp dh,4
+   jb lastScreenUsedValid
+   call pGetCursorPosition ;last screen is not valid, put screen so cursor is at bottom
+   add dh,1ch        ;fast way to add 4 with the validate procedure
+   call pValidateRowAndColumn
+   mov [lastScreenUsed],dh
+
+lastScreenUsedValid:
+   call pMakeCursorVisible ;ensure cursor is visible
    
    pop dx,bx
    ret
@@ -207,6 +222,7 @@ pPrintCharacterToRam endp
 ;inputs:    ds - RAM segment
 ;outputs:   none, prints 4, 20 character rows starting at the currentPrintRow in RAM
 pPrintCurrentScreen proc near
+   ;TODO: show or hide cursor as necessary
    push bx,cx,dx
 
    xor bx,bx
@@ -239,6 +255,17 @@ middleOfLcdRow:
    
    pop dx,cx,bx
 pPrintCurrentScreen endp
+
+;inputs:    ds - RAM segment
+;outputs:   none, RAM pointers updated as appropriate
+pMakeCursorVisible proc near
+   push ax
+   
+   mov al,[lastScreenUsed]
+   mov [currentPrintRow],al
+
+   pop ax
+pMakeCursorVisible endp
 
 ;inputs:    dh - row
 ;           dl - column
