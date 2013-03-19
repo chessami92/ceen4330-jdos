@@ -74,10 +74,16 @@ checkScrollWindowDown:
    call pScrollWindowDown
    jmp videoInterruptComplete
 
-checkOutputCharacter:
+checkPrintCharacterToRam:
    cmp ah,09h
-   jne videoInterruptComplete
+   jne checkPrintCurrentScreen
    call pPrintCharacterToRam
+   jmp videoInterruptComplete
+
+checkPrintCurrentScreen:
+   cmp ah,0ah
+   jne videoInterruptComplete
+   call pPrintCurrentScreen
 
 videoInterruptComplete:
    pop ds
@@ -135,25 +141,8 @@ pInitializeDisplay endp
 ;           screen updated if cursor not present on current rows
 pSetCursorPosition proc near
    ;TODO: show or hide cursor as necessary
-   cmp dl,20
-   jb validCursorColumn
+   call pValidateRowAndColumn
 
-adjustCursorColumn:
-   sub dl,20         ;take off 20 and add one to row
-   inc dh            ;add one to row
-   cmp dl,20
-   jae adjustCursorColumn
-
-validCursorColumn:
-   cmp dh,20h
-   jb validCursorRow
-   
-adjustCursorRow:
-   sub dh,20h
-   cmp dh,20h
-   jae adjustCursorRow
-
-validCursorRow:
    mov [cursorColumn],dx
    ret
 pSetCursorPosition endp
@@ -215,16 +204,67 @@ characterInRam:
    ret
 pPrintCharacterToRam endp
 
-;inputs:    cl - starting row to print
-;outputs:   none, printed 4, 20 character rows starting at row bl
-pPrintScreen proc near
+;inputs:    ds - RAM segment
+;outputs:   none, prints 4, 20 character rows starting at the currentPrintRow in RAM
+pPrintCurrentScreen proc near
+   push bx,cx,dx
+
+   xor bx,bx
+   mov bl,080h        ;LCD display RAM row 0
+   push bx
+   mov bl,0c0h        ;LCD display RAM row 1
+   push bx
+   mov bl,094h        ;LCD display RAM row 2
+   push bx
+   mov bl,0b4h        ;LCD display RAM row 3
    push bx
 
-   mov bx,screenData
-   mOutputScreenData al
+   xor dx,dx         ;clear dx and put row in dh
+   mov dh,[currentPrintRow]
+   mov cx,80         ;characters to print
    
+printCharactersToLcd:
+   cmp dl,00         ;if at beginning of row, send command for start LCD RAM start address
+   jne middleOfLcdRow
    pop bx
-pPrintScreen endp
+   mOutputScreenCommand bl
+
+middleOfLcdRow:
+   call pValidateRowAndColumn
+   call pConvertToRamOffset
+   mov bl,[bx]       ;get next data to be printed
+   mOutputScreenData bl
+   inc dl            ;look at next character
+   loop printCharactersToLcd
+   
+   pop dx,cx,bx
+pPrintCurrentScreen endp
+
+;inputs:    dh - row
+;           dl - column
+;outputs:   dx - valid row and valid column
+pValidateRowAndColumn proc near
+   cmp dl,20
+   jb validCursorColumn
+
+adjustCursorColumn:
+   sub dl,20         ;take off 20 and add one to row
+   inc dh            ;add one to row
+   cmp dl,20
+   jae adjustCursorColumn
+
+validCursorColumn:
+   cmp dh,20h
+   jb validCursorRow
+   
+adjustCursorRow:
+   sub dh,20h
+   cmp dh,20h
+   jae adjustCursorRow
+
+validCursorRow:
+   ret
+pValidateRowAndColumn endp
 
 ;input:     dx - row and column
 ;output:    bx - 20*dh+dl
@@ -243,6 +283,8 @@ pConvertToRamOffset proc near
 
    xor dh,dh      ;clear row to only have column
    add bx,dx      ;add in column
+
+   add bx,screenData ;shift by starting offset
 
    pop dx,ax
 pConvertToRamOffset endp
