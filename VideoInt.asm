@@ -1,72 +1,17 @@
 ;Video service requets. 
 
-;inputs:    command code to send
-;outputs:   sends command with 40us of delay
-mOutputScreenData macro
-   mov ah,lcdDataBits
-   mov al,#1
-   call pOutputToScreen
-   mDelay40us
-#em
-
-;inputs:    command code to send
-;outputs:   sends command with 40us of delay
-mOutputScreenCommand macro
-   mov ah,lcdCommandBits
-   mov al,#1
-   call pOutputToScreen
-   mDelay40us
-#em
-
-;inputs:    none
-;outputs:   none, display initialized and ready to use
-pInitializeDisplay proc near
-   push ax,ds
-
-   mov ax,lcdSegment
-   mov ds,ax
-
-   mDelayMs 15          ;must to wait 15ms before setup is allowed
-   
-   mOutputScreenCommand 30h   ;base initialization
-   mDelayMs 5
-   mOutputScreenCommand 30h
-   mDelay40us
-   mDelay40us
-   mOutputScreenCommand 30h
-
-   mOutputScreenCommand 28h   ;function set to 4-bit interface, 5x8 dot font
-   mOutputScreenCommand 08h   ;display off
-   mOutputScreenCommand 01h   ;clear display
-   mDelayMs 2
-   mOutputScreenCommand 0fh   ;display on, blinking cursor
-   mOutputScreenCommand 06h   ;entry mode, auto-increment
-   pop ds
-
-   push cx,di,es
-
-   xor ax,ax
-   mov es,ax
-   mov di,cursorColumn
-
-   stosw             ;cursor is at row 0, column 0
-   stosb             ;current row is 0
-   mov al,03h        ;last row printed is 3
-   stosb
-
-   mov ax,2020h      ;set all display bytes to space
-   mov cx,140h
-   rep stosw
-
-   pop es,di,cx,ax
-   ret
-pInitializeDisplay endp
-
 ;inputs:    dh - row (00h is top)
 ;           dl - column (0-19)
 ;outputs:   cursor changed to position dh:dl
 ;           screen updated if cursor not present on current rows
 pSetCursorPosition proc near
+   push ax,ds
+   xor ax,ax         ;change to RAM segment
+   mov ds,ax
+
+   mov [cursorColumn],dx
+
+   pop ds,ax
    ret
 pSetCursorPosition endp
 
@@ -160,8 +105,26 @@ videoInterruptComplete:
 int10h endp
 
 ;Screen hardware: X, E, RS, R/W~, D7-D4
-lcdCommandBits EQU 00000000xb
 lcdDataBits EQU 00100000xb
+lcdCommandBits EQU 00000000xb
+
+;inputs:    command code to send
+;outputs:   sends command with 40us of delay
+mOutputScreenData macro
+   mov ah,lcdDataBits
+   mov al,#1
+   call pOutputToScreen
+   mDelay40us
+#em
+
+;inputs:    command code to send
+;outputs:   sends command with 40us of delay
+mOutputScreenCommand macro
+   mov ah,lcdCommandBits
+   mov al,#1
+   call pOutputToScreen
+   mDelay40us
+#em
 
 ;inputs:    al - the decoded byte to send to the screen
 ;           ds - the LCD segment
@@ -203,3 +166,47 @@ pOutputToScreen proc near
    pop ax
    ret
 pOutputToScreen endp
+
+;inputs:    none
+;outputs:   none, display initialized and ready to use
+pInitializeDisplay proc near
+   push ax,ds
+
+   mov ax,lcdSegment
+   mov ds,ax
+
+   mDelayMs 15          ;must to wait 15ms before setup is allowed
+   
+   mOutputScreenCommand 30h   ;base initialization
+   mDelayMs 5
+   mOutputScreenCommand 30h
+   mDelay40us
+   mDelay40us
+   mOutputScreenCommand 30h
+
+   mOutputScreenCommand 28h   ;function set to 4-bit interface, 5x8 dot font
+   mOutputScreenCommand 08h   ;display off
+   mOutputScreenCommand 01h   ;clear display
+   mDelayMs 2
+   mOutputScreenCommand 0fh   ;display on, blinking cursor
+   mOutputScreenCommand 06h   ;entry mode, auto-increment
+   pop ds
+
+   push cx,di,es
+
+   xor ax,ax
+   mov es,ax
+   mov di,cursorColumn
+
+   stosw             ;cursor is at row 0, column 0
+   stosb             ;current row is 0
+   mov al,03h        ;last row printed is 3
+   stosb
+
+   mov ax,2020h      ;set all display bytes to space
+   mov cx,140h
+   rep stosw
+
+   pop es,di,cx,ax
+   ret
+pInitializeDisplay endp
