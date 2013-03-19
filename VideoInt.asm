@@ -1,25 +1,132 @@
 ;Video service requets. 
 
-;input:     dx - row and column
-;output:    bx - 20*dh+dl
-pConvertToRamOffset proc near
-   push ax,dx
+;Screen hardware: X, E, RS, R/W~, D7-D4
+lcdDataBits EQU 00100000xb
+lcdCommandBits EQU 00000000xb
 
-   xor bx,bx      ;clear bx
-   mov bl,dh      ;put row in bx
+;inputs:    command code to send
+;outputs:   sends command with 40us of delay
+mOutputScreenData macro
+   mov ah,lcdDataBits
+   mov al,#1
+   call pOutputToScreen
+   mDelay40us
+#em
+
+;inputs:    command code to send
+;outputs:   sends command with 40us of delay
+mOutputScreenCommand macro
+   mov ah,lcdCommandBits
+   mov al,#1
+   call pOutputToScreen
+   mDelay40us
+#em
+
+;inputs:    al - the decoded byte to send to the screen
+;           ds - the LCD segment
+;outputs:   none, al sent to screen with enable
+mOutputDecodedByte macro
+   or al,01000000xb  ;send data with enable
+   mov [lcdOffset],al
+
+   nop               ;make sure data is latched
+   nop
+   and al,10111111xb ;send data without enable 
+   mov [lcdOffset],al
+#em
+
+;inputs:    ah - function code
+;outputs:   dependent on function code
+int10h proc far
+   push ds,ax
+
+   xor ax,ax         ;change to RAM segment
+   mov ds,ax
+   pop ax
+
+checkInitializeDisplay:
+   cmp ah,00h
+   jne checkSetCursorPosition
+   call pInitializeDisplay
+   jmp videoInterruptComplete
+
+checkSetCursorPosition:
+   cmp ah,02h
+   jne checkGetCursorPosition
+   call pSetCursorPosition
+   jmp videoInterruptComplete
+
+checkGetCursorPosition:
+   cmp ah,03h
+   jne checkScrollWindowUp
+   call pGetCursorPosition
+   jmp videoInterruptComplete
+
+checkScrollWindowUp:
+   cmp ah,06h
+   jne checkScrollWindowDown
+   call pScrollWindowUp
+   jmp videoInterruptComplete
+
+checkScrollWindowDown:
+   cmp ah,07h
+   jne checkOutputCharacter
+   call pScrollWindowDown
+   jmp videoInterruptComplete
+
+checkOutputCharacter:
+   cmp ah,09h
+   jne videoInterruptComplete
+   call pPrintCharacterToRam
+
+videoInterruptComplete:
+   pop ds
+   iret
+int10h endp
+
+;inputs:    none
+;outputs:   none, display initialized and ready to use
+pInitializeDisplay proc near
+   push ax,ds
+
+   mov ax,lcdSegment
+   mov ds,ax
+
+   mDelayMs 15          ;must to wait 15ms before setup is allowed
    
-   shl bx,1       ;multiply by 4
-   shl bx,1
-   mov ax,bx
-   shl bx,1       ;multiply by 4 again
-   shl bx,1
-   add bx,ax      ;16*dh+4*dh
+   mOutputScreenCommand 30h   ;base initialization
+   mDelayMs 5
+   mOutputScreenCommand 30h
+   mDelay40us
+   mDelay40us
+   mOutputScreenCommand 30h
 
-   xor dh,dh      ;clear row to only have column
-   add bx,dx      ;add in column
+   mOutputScreenCommand 28h   ;function set to 4-bit interface, 5x8 dot font
+   mOutputScreenCommand 08h   ;display off
+   mOutputScreenCommand 01h   ;clear display
+   mDelayMs 2
+   mOutputScreenCommand 0fh   ;display on, blinking cursor
+   mOutputScreenCommand 06h   ;entry mode, auto-increment
+   pop ds
 
-   pop dx,ax
-pConvertToRamOffset endp
+   push cx,di,es
+
+   xor ax,ax
+   mov es,ax
+   mov di,cursorColumn
+
+   stosw             ;cursor is at row 0, column 0
+   stosb             ;current row is 0
+   mov al,03h        ;last row printed is 3
+   stosb
+
+   mov ax,2020h      ;set all display bytes to space
+   mov cx,140h
+   rep stosw
+
+   pop es,di,cx,ax
+   ret
+pInitializeDisplay endp
 
 ;inputs:    ds - RAM segment
 ;           dh - row (00h is top, 1fh is bottom)
@@ -108,89 +215,37 @@ characterInRam:
    ret
 pPrintCharacterToRam endp
 
-;inputs:    ah - function code
-;outputs:   dependent on function code
-int10h proc far
-   push ds,ax
+;inputs:    cl - starting row to print
+;outputs:   none, printed 4, 20 character rows starting at row bl
+pPrintScreen proc near
+   push bx
 
-   xor ax,ax         ;change to RAM segment
-   mov ds,ax
-   pop ax
+   mov bx,screenData
+   mOutputScreenData al
+   
+   pop bx
+pPrintScreen endp
 
-checkInitializeDisplay:
-   cmp ah,00h
-   jne checkSetCursorPosition
-   call pInitializeDisplay
-   jmp videoInterruptComplete
+;input:     dx - row and column
+;output:    bx - 20*dh+dl
+pConvertToRamOffset proc near
+   push ax,dx
 
-checkSetCursorPosition:
-   cmp ah,02h
-   jne checkGetCursorPosition
-   call pSetCursorPosition
-   jmp videoInterruptComplete
+   xor bx,bx      ;clear bx
+   mov bl,dh      ;put row in bx
+   
+   shl bx,1       ;multiply by 4
+   shl bx,1
+   mov ax,bx
+   shl bx,1       ;multiply by 4 again
+   shl bx,1
+   add bx,ax      ;16*dh+4*dh
 
-checkGetCursorPosition:
-   cmp ah,03h
-   jne checkScrollWindowUp
-   call pGetCursorPosition
-   jmp videoInterruptComplete
+   xor dh,dh      ;clear row to only have column
+   add bx,dx      ;add in column
 
-checkScrollWindowUp:
-   cmp ah,06h
-   jne checkScrollWindowDown
-   call pScrollWindowUp
-   jmp videoInterruptComplete
-
-checkScrollWindowDown:
-   cmp ah,07h
-   jne checkOutputCharacter
-   call pScrollWindowDown
-   jmp videoInterruptComplete
-
-checkOutputCharacter:
-   cmp ah,09h
-   jne videoInterruptComplete
-   call pPrintCharacterToRam
-
-videoInterruptComplete:
-   pop ds
-   iret
-int10h endp
-
-;Screen hardware: X, E, RS, R/W~, D7-D4
-lcdDataBits EQU 00100000xb
-lcdCommandBits EQU 00000000xb
-
-;inputs:    command code to send
-;outputs:   sends command with 40us of delay
-mOutputScreenData macro
-   mov ah,lcdDataBits
-   mov al,#1
-   call pOutputToScreen
-   mDelay40us
-#em
-
-;inputs:    command code to send
-;outputs:   sends command with 40us of delay
-mOutputScreenCommand macro
-   mov ah,lcdCommandBits
-   mov al,#1
-   call pOutputToScreen
-   mDelay40us
-#em
-
-;inputs:    al - the decoded byte to send to the screen
-;           ds - the LCD segment
-;outputs:   none, al sent to screen with enable
-mOutputDecodedByte macro
-   or al,01000000xb  ;send data with enable
-   mov [lcdOffset],al
-
-   nop               ;make sure data is latched
-   nop
-   and al,10111111xb ;send data without enable 
-   mov [lcdOffset],al
-#em
+   pop dx,ax
+pConvertToRamOffset endp
 
 ;inputs:    al - the command to be sent to the screen
 ;           ah - upper 4 bits are to distinguish between data and command
@@ -219,58 +274,3 @@ pOutputToScreen proc near
    pop ax
    ret
 pOutputToScreen endp
-
-;inputs:    cl - starting row to print
-;outputs:   none, printed 4, 20 character rows starting at row bl
-pPrintScreen proc near
-   push bx
-
-   mov bx,screenData
-   mOutputScreenData al
-   
-   pop bx
-pPrintScreen endp
-
-;inputs:    none
-;outputs:   none, display initialized and ready to use
-pInitializeDisplay proc near
-   push ax,ds
-
-   mov ax,lcdSegment
-   mov ds,ax
-
-   mDelayMs 15          ;must to wait 15ms before setup is allowed
-   
-   mOutputScreenCommand 30h   ;base initialization
-   mDelayMs 5
-   mOutputScreenCommand 30h
-   mDelay40us
-   mDelay40us
-   mOutputScreenCommand 30h
-
-   mOutputScreenCommand 28h   ;function set to 4-bit interface, 5x8 dot font
-   mOutputScreenCommand 08h   ;display off
-   mOutputScreenCommand 01h   ;clear display
-   mDelayMs 2
-   mOutputScreenCommand 0fh   ;display on, blinking cursor
-   mOutputScreenCommand 06h   ;entry mode, auto-increment
-   pop ds
-
-   push cx,di,es
-
-   xor ax,ax
-   mov es,ax
-   mov di,cursorColumn
-
-   stosw             ;cursor is at row 0, column 0
-   stosb             ;current row is 0
-   mov al,03h        ;last row printed is 3
-   stosb
-
-   mov ax,2020h      ;set all display bytes to space
-   mov cx,140h
-   rep stosw
-
-   pop es,di,cx,ax
-   ret
-pInitializeDisplay endp
