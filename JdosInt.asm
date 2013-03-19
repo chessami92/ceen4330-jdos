@@ -13,25 +13,25 @@ mInputWithoutEcho macro
 #em
 
 ;inputs:    ds:dx - string address
-;outputs:   none - prints until a $ is encountered
+;outputs:   none - prints until a null byte is encountered
 mStringOutput macro
-   ;TODO: make this a null byte instead of the $
-   push ax
-   push si
+   push ax,si
 
-   cld         ;increment SI on lodsb
-   
+   cld               ;increment SI on lodsb
+   mov ah,09h        ;print character code for int 10h
+
 printCharacter:
    lodsb
-   cmp al,'$'
+   cmp al,00h
    je outputStringComplete
-   mov dl,al
-   call pPrintCharacterToRam
+   int 10h
    jmp printCharacter
 
 outputStringComplete:
-   pop si
-   pop ax
+   mov ah,0ah        ;refresh the screen
+   int 10h  
+
+   pop si,ax
 #em
 
 ;inputs:    ah - function code
