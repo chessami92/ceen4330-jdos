@@ -15,6 +15,7 @@ mInputWithoutEcho macro
 ;inputs:    ds:dx - string address
 ;outputs:   none - prints until a $ is encountered
 mStringOutput macro
+   ;TODO: make this a null byte instead of the $
    push ax
    push si
 
@@ -25,7 +26,7 @@ printCharacter:
    cmp al,'$'
    je outputStringComplete
    mov dl,al
-   call pOutputCharacter
+   call pPrintCharacterToRam
    jmp printCharacter
 
 outputStringComplete:

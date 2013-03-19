@@ -1,31 +1,61 @@
 ;Video service requets. 
 
-;inputs:    dh - row (00h is top)
+;input:     dx - row and column
+;output:    bx - 20*dh+dl
+pConvertToRamOffset proc near
+   push ax,dx
+
+   xor bx,bx      ;clear bx
+   mov bl,dh      ;put row in bx
+   
+   shl bx,1       ;multiply by 4
+   shl bx,1
+   mov ax,bx
+   shl bx,1       ;multiply by 4 again
+   shl bx,1
+   add bx,ax      ;16*dh+4*dh
+
+   xor dh,dh      ;clear row to only have column
+   add bx,dx      ;add in column
+
+   pop dx,ax
+pConvertToRamOffset endp
+
+;inputs:    ds - RAM segment
+;           dh - row (00h is top, 1fh is bottom)
 ;           dl - column (0-19)
 ;outputs:   cursor changed to position dh:dl
 ;           screen updated if cursor not present on current rows
 pSetCursorPosition proc near
-   push ax,ds
-   xor ax,ax         ;change to RAM segment
-   mov ds,ax
+   ;TODO: show or hide cursor as necessary
+   cmp dl,20
+   jb validCursorColumn
 
+adjustCursorColumn:
+   sub dl,20         ;take off 20 and add one to row
+   inc dh            ;add one to row
+   cmp dl,20
+   jae adjustCursorColumn
+
+validCursorColumn:
+   cmp dh,20h
+   jb validCursorRow
+   
+adjustCursorRow:
+   sub dh,20h
+   cmp dh,20h
+   jae adjustCursorRow
+
+validCursorRow:
    mov [cursorColumn],dx
-
-   pop ds,ax
    ret
 pSetCursorPosition endp
 
-;inputs:    none
+;inputs:    ds - RAM segment
 ;outputs:   dh - row (00h is top, 1fh is bottom)
 ;           dl - column (0-19)
 pGetCursorPosition proc near
-   push ax,ds
-   xor ax,ax         ;change to RAM segment
-   mov ds,ax
-
    mov dx,[cursorColumn]
-
-   pop ds,ax
    ret
 pGetCursorPosition endp
 
@@ -33,36 +63,59 @@ pGetCursorPosition endp
 ;              al=00h means to clear display
 ;outputs:   none - does not update cursor
 pScrollWindowUp proc near
+   ;TODO: show or hide cursor as necessary
    ret
 pScrollWindowUp endp
 
 ;inputs:    al - number of lines to scroll down
 ;outputs:   none - does not update cursor
 pScrollWindowDown proc near
+   ;TODO: show or hide cursor as necessary
    ret
 pScrollWindowDown endp
 
 ;inputs:    al - the character to print
-;outputs:   character put on display
+;              if al = 0ah, then spaces are put in RAM til EOL
+;outputs:   character put in display RAM
 ;           if cursor is not currently visible, screen scrolled to cursor first
-pOutputCharacter proc near 
-   ;TODO: make sure cursor is visible on screen
-   ;TODO: check line wrappings on cursor
-   push ax,dx
+pPrintCharacterToRam proc near 
+   push bx,dx
+   
+   xor bx,bx         ;change to RAM segment
+   mov ds,bx
 
-   call pGetCursorPosition
-   mOutputScreenData al
+   call pGetCursorPosition    ;dh = row, dl = column
+   call pConvertToRamOffset   ;bx = RAM offset given dx
+   cmp al,0ah
+   jne nonNewLine    ;else there is new line, print spaces til EOL
+   
+putSpacesInRam:
+   mov B[bx],20h     ;put space in RAM
+   inc bx            ;increment RAM pointer and column counter
+   inc dl
+   cmp dl,20         ;see if at last column
+   je characterInRam
+   jne putSpacesInRam
 
-   pop dx,ax
+nonNewLine:
+   mov [bx],al       ;store character in RAM
+   inc dl            ;increment column
+
+characterInRam:
+   call pSetCursorPosition     ;update cursor position
+   
+   pop dx,bx
    ret
-pOutputCharacter endp
+pPrintCharacterToRam endp
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int10h proc far
-   push ds
+   push ds,ax
 
-   mov ds,lcdSegment
+   xor ax,ax         ;change to RAM segment
+   mov ds,ax
+   pop ax
 
 checkInitializeDisplay:
    cmp ah,00h
@@ -97,7 +150,7 @@ checkScrollWindowDown:
 checkOutputCharacter:
    cmp ah,09h
    jne videoInterruptComplete
-   call pOutputCharacter
+   call pPrintCharacterToRam
 
 videoInterruptComplete:
    pop ds
@@ -166,6 +219,17 @@ pOutputToScreen proc near
    pop ax
    ret
 pOutputToScreen endp
+
+;inputs:    cl - starting row to print
+;outputs:   none, printed 4, 20 character rows starting at row bl
+pPrintScreen proc near
+   push bx
+
+   mov bx,screenData
+   mOutputScreenData al
+   
+   pop bx
+pPrintScreen endp
 
 ;inputs:    none
 ;outputs:   none, display initialized and ready to use
