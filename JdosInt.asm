@@ -6,12 +6,6 @@ mInputWithEcho macro
    
 #em
 
-;inputs:    dl - character to output
-;outputs:   none
-pOutputCharacter proc near
-   
-pOutputCharacter endp
-
 ;inputs:    none
 ;outputs:   al - input character
 mInputWithoutEcho macro
@@ -19,24 +13,25 @@ mInputWithoutEcho macro
 #em
 
 ;inputs:    ds:dx - string address
-;outputs:   none - prints until a $ is encountered
+;outputs:   none - prints until a null byte is encountered
 mStringOutput macro
-   push ax
-   push si
+   push ax,si
 
-   cld         ;increment SI on lodsb
-   
+   cld               ;increment SI on lodsb
+   mov ah,09h        ;print character code for int 10h
+
 printCharacter:
    lodsb
-   cmp al,'$'
+   cmp al,00h
    je outputStringComplete
-   mov dl,al
-   call pOutputCharacter
+   int 10h
    jmp printCharacter
 
 outputStringComplete:
-   pop si
-   pop ax
+   mov ah,0ah        ;refresh the screen
+   int 10h  
+
+   pop si,ax
 #em
 
 ;inputs:    ah - function code
@@ -44,13 +39,8 @@ outputStringComplete:
 int21h proc far
 checkInputWithEcho:
    cmp ah,01h
-   jne checkOutputCharacter
-   mInputWithEcho
-
-checkOutputCharacter:
-   cmp ah,02h
    jne checkInputWithoutEcho
-   call pOutputCharacter
+   mInputWithEcho
 
 checkInputWithoutEcho:
    cmp ah,07h

@@ -1,10 +1,10 @@
 ;each mapping in this table takes 5 bytes: 1 for which interrupt,
 ;4 for the CS and IP of the interrupt
 interruptTable:
-   db 05h            ;print screen
-   dw int05h, 0f000h
    db 09h,           ;keyboard hardware
    dw int09h, 0f000h,
+   db 10h            ;print screen
+   dw int10h, 0f000h
    db 12h,           ;memory check
    dw defaultInterrupt, 0f000h,
    db 16h,           ;keyboard service
