@@ -70,22 +70,25 @@ pJdosInit proc far
    cli               ;make sure no interrupts while initializing
 
    mInitializeStackPointer
-
    mLoadInterruptVectorTable
-
    mInitializeInterruptController
    
    mov ah,04h        ;initialize the keyboard
    int 16h
-     
    xor ah,ah         ;initialize the display
    int 05h
 
    sti               ;allow interrupts now that IVT is initialized
 
-   call pOutputToLeds
-
 stall:
+   mov ax,0AAAAh
+   mov bl,0Ah
+   call pOutputToLeds
+   mDelayMs 1000     ;delay 1 second
+   mov ax,5555h
+   mov bl,05h
+   call pOutputToLeds
+   mDelayMs 1000     ;delay 1 second
    jmp stall
 
    ret               ;included for consistency, but never reached 
