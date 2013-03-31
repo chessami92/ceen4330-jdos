@@ -1,4 +1,3 @@
-
 ;inputs:    none
 ;outputs:   ss - set to a valid point in ram
 ;           sp - points
@@ -13,10 +12,9 @@ mInitializeStackPointer macro
 mLoadInterruptVectorTable macro
    push es,ds,di,si,ax,bx,cx
 
-   xor cx,cx
-   mov es,cx         ;point to beginning of RAM
-   mov di,cx
-   mov ds,0f000h     ;point to beginning of ROM
+   mov es,0000h
+   xor di,di
+   mov ds,0f000h
    mov si,offset interruptTable
 
    cld               ;increment on string instructions
@@ -49,10 +47,9 @@ storeDefinedInterrupts:
 #em
 
 mInitializeInterruptController macro
-   push ax,ds
+   push ds
 
-   mov ax,intControllerSegment
-   mov ds,ax
+   mov ds,intControllerSegment
 
    mov B[intCommand1],00011011xb ;level triggered, single, ICW4 needed 
    mov B[intCommand2],00001000xb ;start address of 08h
@@ -60,7 +57,7 @@ mInitializeInterruptController macro
 
    mov B[intCommand2],11111100xb ;ignore interrupts 2-7 as they are not connected
 
-   pop ds,ax
+   pop ds
 #em
 
 ;First point of entry for the microprocessor.

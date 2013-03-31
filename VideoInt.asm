@@ -38,11 +38,9 @@ mOutputDecodedByte macro
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int10h proc far
-   push ds,ax
+   push ds
 
-   xor ax,ax         ;change to RAM segment
-   mov ds,ax
-   pop ax
+   mov ds,0000h
 
 checkInitializeDisplay:
    cmp ah,00h
@@ -93,10 +91,9 @@ int10h endp
 ;inputs:    none
 ;outputs:   none, display initialized and ready to use
 pInitializeDisplay proc near
-   push ax,ds
+   push ds
 
-   mov ax,lcdSegment
-   mov ds,ax
+   mov ds,lcdSegment
 
    mDelayMs 15       ;must to wait 15ms before setup is allowed
    
@@ -115,10 +112,9 @@ pInitializeDisplay proc near
    mOutputScreenCommand 06h   ;entry mode, auto-increment
    pop ds
 
-   push cx,di,es
+   push ax,cx,di,es
 
-   xor ax,ax
-   mov es,ax
+   mov es,0000h
    mov di,cursorColumn
 
    stosw             ;cursor is at row 0, column 0
@@ -177,8 +173,7 @@ pScrollWindowDown endp
 pPrintCharacterToRam proc near 
    push bx,dx
    
-   xor bx,bx         ;change to RAM segment
-   mov ds,bx
+   mov ds,0000h      ;change to RAM segment
 
    call pGetCursorPosition    ;dh = row, dl = column
    call pConvertToRamOffset   ;bx = RAM offset given dx
@@ -219,21 +214,15 @@ lastScreenUsedValid:
    ret
 pPrintCharacterToRam endp
 
+lcdRowAddresses db 080h, 0c0h, 094h, 0b4h
 ;inputs:    ds - RAM segment
 ;outputs:   none, prints 4, 20 character rows starting at the currentPrintRow in RAM
 pPrintCurrentScreen proc near
    ;TODO: show or hide cursor as necessary
-   push bx,cx,dx
+   push bx,cx,dx,di
 
    xor bx,bx
-   mov bl,080h        ;LCD display RAM row 0
-   push bx
-   mov bl,0c0h        ;LCD display RAM row 1
-   push bx
-   mov bl,094h        ;LCD display RAM row 2
-   push bx
-   mov bl,0b4h        ;LCD display RAM row 3
-   push bx
+   mov di,offset lcdRowAddresses
 
    xor dx,dx         ;clear dx and put row in dh
    mov dh,[currentPrintRow]
@@ -242,7 +231,8 @@ pPrintCurrentScreen proc near
 printCharactersToLcd:
    cmp dl,00         ;if at beginning of row, send command for start LCD RAM start address
    jne middleOfLcdRow
-   pop bx
+   mov bl,cs:[di]
+   inc di
    mOutputScreenCommand bl
 
 middleOfLcdRow:
@@ -253,7 +243,7 @@ middleOfLcdRow:
    inc dl            ;look at next character
    loop printCharactersToLcd
    
-   pop dx,cx,bx
+   pop di,dx,cx,bx
 pPrintCurrentScreen endp
 
 ;inputs:    ds - RAM segment

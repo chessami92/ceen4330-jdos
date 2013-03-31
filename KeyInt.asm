@@ -5,8 +5,7 @@
 mInsertIfNotFull macro
    push bx,cx,ds
    
-   xor bx,bx         ;change to RAM segment
-   mov ds,bx
+   mov ds,0000h      ;change to RAM segment
 
    mov bl,[keyboardPointers]
    mov bh,bl
@@ -45,8 +44,8 @@ scanAsciiTable db 08h, ')^_>~~~&*AB(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~4
 ;outputs:   queue is updated with new character
 int09h proc far
    push bx,dx,ds
-   mov bx,keyboardSegment
-   mov ds,bx
+
+   mov ds,keyboardSegment
 
    mov B[keyboardCommand],01000000b ;setup to read 8279
 
@@ -93,12 +92,13 @@ int16h endp
 ;outputs:   ah - key scan code
 ;           al - ASCII character
 pReadCharacter proc near
-   push ax,ds
+   push ds
+
    mov ds,keyboardSegment
    
    ;TODO: read from character queue in RAM
    
-   pop ds,ax
+   pop ds
    ret               ;got character, return to caller
 pReadCharacter endp
 
@@ -106,6 +106,7 @@ pReadCharacter endp
 ;outputs:   none, 8279 initialized
 pInitializeKeyboard proc near
    push ax,ds
+
    mov ds,keyboardSegment
 
    mov B[keyboardCommand],00000001b ;set to decoded scan keyboard
@@ -113,8 +114,7 @@ pInitializeKeyboard proc near
    mov B[keyboardCommand],10100000b ;do not mast display nibbles
    mov B[keyboardCommand],11000001b ;clear FIFO and RAM
   
-   xor ax,ax         ;set up head and tail pointer for RAM key queue
-   mov ds,ax
+   mov ds,0000h      ;set up head and tail pointer for RAM key queue
    mov B[keyboardQueue],0Eh
 
    pop ds,ax
