@@ -79,16 +79,15 @@ pJdosInit proc far
    int 05h
 
    sti               ;allow interrupts now that IVT is initialized
+   
+   mov ax,0aaaah
+   mov bl,0aah
 
 stall:
-   mov ax,0AAAAh
-   mov bl,0Ah
+   xor ax,0ffffh
+   xor bl,0ffh
    call pOutputToLeds
-   mDelayMs 1000     ;delay 1 second
-   mov ax,5555h
-   mov bl,05h
-   call pOutputToLeds
-   mDelayMs 1000     ;delay 1 second
+   mDelayMs 200      ;delay 1 second
    jmp stall
 
    ret               ;included for consistency, but never reached 
