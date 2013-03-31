@@ -1,10 +1,9 @@
 ;Keyboard service requests
 
-;inputs:    al - the new character
+;inputs:    dl - the new character
 ;outputs:   queue is updated with new character if possible
-;           modifies ds to be the RAM segment
 mInsertIfNotFull macro
-   push cx
+   push bx,cx,ds
    
    xor bx,bx         ;change to RAM segment
    mov ds,bx
@@ -19,7 +18,7 @@ mInsertIfNotFull macro
    push bx
    mov bl,bh
    xor bh,bh
-   mov [bx + keyboardQueue],al
+   mov [bx + keyboardQueue],dl
    pop bx
 
    inc bh
@@ -37,15 +36,15 @@ validNewBh:
    mov [keyboardPointers],bl
    
 characterInsertComplete:
-   pop cx
+   pop ds,cx,bx
 #em
 
-scanAsciiTable db '0123456789ABCDEF'
+scanAsciiTable db 08h, ')^_>~~~&*AB(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~45dc6~~~12fe3~~~'
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
 int09h proc far
-   push bx,ds
+   push bx,dx,ds
    mov bx,keyboardSegment
    mov ds,bx
 
@@ -53,17 +52,21 @@ int09h proc far
 
    xor bx,bx
    mov bl,[keyboardData]
-   mov al,cs:[bx + offset scanAsciiTable]
+
+   shl bx,1          ;remove unused bit between scan code and shift bit
+   shl bx,1
+   shl bl,1
+   shr bx,1
+   shr bx,1
+
+   and bl,3fh        ;TODO: add in logic to detect control c, notify Jdos
+   mov dl,cs:[offset scanAsciiTable + bx]
 
    mov B[keyboardCommand],11100000b ;end the 8279 interrupt request
 
    mInsertIfNotFull
 
-   ;end interrupt mode for the interrupt controller
-   mov bx,intControllerSegment
-   mov B[intCommand1],00100001b
-
-   pop ds,bx
+   pop ds,dx,bx
    iret
 int09h endp
 
