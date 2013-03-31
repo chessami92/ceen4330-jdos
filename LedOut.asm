@@ -2,20 +2,20 @@
 ;           bl - lower nibble is most significant 4 bits
 ;outputs:   pattern displayed to LEDs
 pOutputToLeds proc near
-   push ds
+   push cx,ds
 
-   mov bx,keyboardSegment
-   mov ds,bx
-
+   mov cx,keyboardSegment
+   mov ds,cx
+   
    ;begin writing at first byte location
    mov B[keyboardCommand],10010000b
 
    ;data for LEDs
-   mov B[keyboardData],al
-   mov B[keyboardData],ah
-   mov B[keyboardData],bl
-
-   pop ds
-
+   mov [keyboardData],al
+   mov [keyboardData],ah
+   mov [keyboardData],bl
+   mov B[keyboardData],00h
+   
+   pop ds,cx
    ret
 pOutputToLeds endp
