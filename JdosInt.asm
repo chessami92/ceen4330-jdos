@@ -13,8 +13,8 @@ checkInputWithEcho:
 checkInputWithoutEcho:
    cmp ah,07h
    jne checkStringOutput
-   call pInputWithEcho
-   mov ah,01h        ;restore value of ah
+   call pInputWithoutEcho
+   mov ah,07h        ;restore value of ah
    jmp osInterruptComplete
 
 checkStringOutput:
@@ -30,18 +30,33 @@ int21h endp
 ;inputs:    none
 ;outputs:   al - input character
 pInputWithEcho proc near
-   push ax
+   push dx
+
+   call pInputWithoutEcho
+
+   mov dl,al
+   mov ah,09h
+   int 10h
    
-   xor ah,ah
-   int 16h
-   
-   pop ax
+   pop dx
    ret
 pInputWithEcho endp
 
 ;inputs:    none
 ;outputs:   al - input character
 pInputWithoutEcho proc near
+   push dx
+
+   mov dl,0fh        ;display on, blinking cursor
+   call pOutputScreenCommand
+
+   xor ah,ah
+   int 16h
+
+   mov dl,0ch        ;display on, no cursor
+   call pOutputScreenCommand
+
+   pop dx
    ret
 pInputWithoutEcho endp
 

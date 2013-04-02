@@ -121,6 +121,8 @@ displayTestResult:
    mov ah,09h
    mov ds,romSegment
    int 21h
+
+   mDelayMs 1000
    pop si,ds,dx,cx,bx,ax
    ret
 pTestMemory endp
@@ -150,8 +152,8 @@ pJdosInit proc far
    mov al,0aah
 
 ledFlashing:
-   xor bx,0ffffh
-   xor al,0ffh
+   not bx
+   not al
    call pOutputToLeds
    mDelayMs 200
    jmp ledFlashing

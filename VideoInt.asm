@@ -1,6 +1,6 @@
 ;Video service requets. 
 
-;Screen hardware: X, E, RS, R/W~, D7-D4
+;Screen hardware: speaker, E, RS, R/W~, D7-D4
 lcdCommandBits EQU 10000000xb
 lcdDataBits    EQU 10100000xb
 
@@ -289,7 +289,7 @@ pPrintCurrentScreen proc near
    push cx,dx,ds,si
    
    mov ds,ramSegment
-
+   ;TODO: fix this to only pull in a byte
    xor si,si
    mov si,[currentPrintRow]
    add si,screenData ;shift by starting offset
@@ -314,7 +314,7 @@ pPrintCurrentScreen endp
 pMakeCursorVisible proc near
    push ax,ds
    
-   mov ds,0000h
+   mov ds,ramSegment
    
    mov al,[lastScreenUsed]
    mov [currentPrintRow],al
