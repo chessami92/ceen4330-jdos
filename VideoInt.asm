@@ -1,47 +1,80 @@
 ;Video service requets. 
 
 ;Screen hardware: X, E, RS, R/W~, D7-D4
-lcdDataBits EQU 00100000xb
-lcdCommandBits EQU 00000000xb
-
-;inputs:    command code to send
-;outputs:   sends command with 40us of delay
-mOutputScreenData macro
-   mov ah,lcdDataBits
-   mov al,#1
-   call pOutputToScreen
-   mDelay40us
-#em
+lcdCommandBits EQU 10000000xb
+lcdDataBits    EQU 10100000xb
 
 ;inputs:    command code to send
 ;outputs:   sends command with 40us of delay
 mOutputScreenCommand macro
-   mov ah,lcdCommandBits
-   mov al,#1
+   push dx
+   
+   mov dh,lcdCommandBits
+   mov dl,#1
    call pOutputToScreen
    mDelay40us
+   
+   pop dx
 #em
 
-;inputs:    al - the decoded byte to send to the screen
+;inputs:    dl - ascii character to send
+;outputs:   sends command with 40us of delay
+;           corrects lcd address for proper line wrapping
+pOutputScreenData proc near
+   push dx,ds
+   mov dh,lcdDataBits
+   call pOutputToScreen
+   mDelay40us
+   
+   mov ds,ramSegment
+   
+   mov dl,[currentLcdCursor]
+   inc dl
+checkFirstLcdRow:
+   cmp dl,20
+   jne checkSecondLcdRow
+   mOutputScreenCommand 0c0h
+   jmp correctLcdCursor
+checkSecondLcdRow:
+   cmp dl,40
+   jne checkThirdLcdRow
+   mOutputScreenCommand 094h
+   jmp correctLcdCursor
+checkThirdLcdRow:
+   cmp dl,60
+   jne checkZerothLcdRow
+   mOutputScreenCommand 0d4h
+   jmp correctLcdCursor
+checkZerothLcdRow:
+   cmp dl,80
+   jne correctLcdCursor
+   mOutputScreenCommand 080h
+   xor dl,dl
+   jmp correctLcdCursor
+
+correctLcdCursor:
+   mov [currentLcdCursor],dl
+   
+   pop ds,dx
+   ret
+pOutputScreenData endp
+
+;inputs:    dl - the decoded byte to send to the screen
 ;           ds - the LCD segment
 ;outputs:   none, al sent to screen with enable
 mOutputDecodedByte macro
-   or al,01000000xb  ;send data with enable
-   mov [lcdOffset],al
+   or dl,01000000xb  ;send data with enable
+   mov [lcdOffset],dl
 
    nop               ;make sure data is latched
    nop
-   and al,10111111xb ;send data without enable 
-   mov [lcdOffset],al
+   and dl,10111111xb ;send data without enable 
+   mov [lcdOffset],dl
 #em
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int10h proc far
-   push ds
-
-   mov ds,0000h
-
 checkInitializeDisplay:
    cmp ah,00h
    jne checkSetCursorPosition
@@ -84,7 +117,6 @@ checkPrintCurrentScreen:
    call pPrintCurrentScreen
 
 videoInterruptComplete:
-   pop ds
    iret
 int10h endp
 
@@ -115,8 +147,9 @@ pInitializeDisplay proc near
    push ax,cx,di,es
 
    mov es,0000h
-   mov di,cursorColumn
+   mov di,currentLcdCursor
 
+   stosb             ;current lcd location is 0
    stosw             ;cursor is at row 0, column 0
    stosb             ;current row is 0
    mov al,03h        ;last row printed is 3
@@ -203,7 +236,7 @@ doNotAdd20h:
    cmp dh,4
    jb lastScreenUsedValid
    call pGetCursorPosition ;last screen is not valid, put screen so cursor is at bottom
-   add dh,1ch        ;fast way to add 4 with the validate procedure
+   add dh,1ch        ;fast way to subtract 4 with the validate procedure
    call pValidateRowAndColumn
    mov [lastScreenUsed],dh
 
@@ -214,47 +247,46 @@ lastScreenUsedValid:
    ret
 pPrintCharacterToRam endp
 
-lcdRowAddresses db 080h, 0c0h, 094h, 0b4h
-;inputs:    ds - RAM segment
+;inputs:    none
 ;outputs:   none, prints 4, 20 character rows starting at the currentPrintRow in RAM
 pPrintCurrentScreen proc near
    ;TODO: show or hide cursor as necessary
-   push bx,cx,dx,di
+   push cx,dx,ds,si
+   
+   mov ds,ramSegment
 
-   xor bx,bx
-   mov di,offset lcdRowAddresses
+   xor si,si
+   mov si,[currentPrintRow]
+   add si,screenData ;shift by starting offset
+   
+   push ax
+   mov ax,si
+   call pOutputToLeds
+   mDelayMs 5000
+   pop ax
 
-   xor dx,dx         ;clear dx and put row in dh
-   mov dh,[currentPrintRow]
    mov cx,80         ;characters to print
    
 printCharactersToLcd:
-   cmp dl,00         ;if at beginning of row, send command for start LCD RAM start address
-   jne middleOfLcdRow
-   mov bl,cs:[di]
-   inc di
-   mOutputScreenCommand bl
-
-middleOfLcdRow:
-   call pValidateRowAndColumn
-   call pConvertToRamOffset
-   mov bl,[bx]       ;get next data to be printed
-   mOutputScreenData bl
-   inc dl            ;look at next character
+   mov dl,[si]
+   call pOutputScreenData
+   inc si
    loop printCharactersToLcd
    
-   pop di,dx,cx,bx
+   pop si,ds,dx,cx
 pPrintCurrentScreen endp
 
-;inputs:    ds - RAM segment
+;inputs:    none
 ;outputs:   none, RAM pointers updated as appropriate
 pMakeCursorVisible proc near
-   push ax
+   push ax,ds
+   
+   mov ds,0000h
    
    mov al,[lastScreenUsed]
    mov [currentPrintRow],al
 
-   pop ax
+   pop ds,ax
 pMakeCursorVisible endp
 
 ;inputs:    dh - row
@@ -306,30 +338,31 @@ pConvertToRamOffset proc near
    pop dx,ax
 pConvertToRamOffset endp
 
-;inputs:    al - the command to be sent to the screen
-;           ah - upper 4 bits are to distinguish between data and command
-;           ds - the LCD segment
+;inputs:    dl - the command to be sent to the screen
+;           dh - upper 4 bits are to distinguish between data and command
 ;outputs    none, al sent to the screen
 pOutputToScreen proc near
-   push ax
-
-   shr al,1
-   shr al,1
-   shr al,1
-   shr al,1
-   or al,ah
+   push ds,dx
+   
+   mov ds,lcdSegment
+   
+   shr dl,1
+   shr dl,1
+   shr dl,1
+   shr dl,1
+   or dl,dh
    mOutputDecodedByte;output first nibble
 
    nop               ;wait before sending next data
    nop
    nop
 
-   pop ax            ;refresh ax
-   push ax
-   and al,0fh        ;clear upper nibble 
-   or al,ah
+   pop dx            ;refresh dx
+   push dx
+   and dl,0fh        ;clear upper nibble 
+   or dl,dh
    mOutputDecodedByte;output second nibble
 
-   pop ax
+   pop dx,ds
    ret
 pOutputToScreen endp
