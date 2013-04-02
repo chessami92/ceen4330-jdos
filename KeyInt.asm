@@ -38,7 +38,7 @@ characterInsertComplete:
    pop ds,cx,bx
 #em
 
-scanAsciiTable db 08h, ')^_>~~~&*AB(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~45dc6~~~12fe3~~~'
+scanAsciiTable db 08h, ')^_>~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~45dc6~~~12fe3~~~'
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
@@ -57,9 +57,12 @@ int09h proc far
    shl bl,1
    shr bx,1
    shr bx,1
-
-   and bl,3fh        ;TODO: add in logic to detect control c, notify Jdos
+   shr bx,1
+   ;TODO: convert control c to 03h
+   and bl,3fh        ;clear control bit
+   
    mov dl,cs:[offset scanAsciiTable + bx]
+   call pOutputScreenData
 
    mov B[keyboardCommand],11100000b ;end the 8279 interrupt request
 
@@ -94,7 +97,7 @@ int16h endp
 pReadCharacter proc near
    push ds
 
-   mov ds,keyboardSegment
+   mov ds,ramSegment
    
    ;TODO: read from character queue in RAM
    
@@ -114,7 +117,7 @@ pInitializeKeyboard proc near
    mov B[keyboardCommand],10100000b ;do not mast display nibbles
    mov B[keyboardCommand],11000001b ;clear FIFO and RAM
   
-   mov ds,0000h      ;set up head and tail pointer for RAM key queue
+   mov ds,ramSegment ;set up head and tail pointer for RAM key queue
    mov B[keyboardQueue],0Eh
 
    pop ds,ax
