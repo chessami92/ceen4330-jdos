@@ -17,11 +17,13 @@ mOutputScreenCommand macro
    pop dx
 #em
 
+;command to send to change to row 1, 2, 3, and 0 respectively
+screenLines db 0c0h, 094h, 0d4h, 080h
 ;inputs:    dl - ascii character to send
 ;outputs:   sends command with 40us of delay
 ;           corrects lcd address for proper line wrapping
 pOutputScreenData proc near
-   push dx,ds
+   push ax,bx,dx,ds
    mov dh,lcdDataBits
    call pOutputToScreen
    mDelay40us
@@ -30,32 +32,28 @@ pOutputScreenData proc near
    
    mov dl,[currentLcdCursor]
    inc dl
-checkFirstLcdRow:
-   cmp dl,20
-   jne checkSecondLcdRow
-   mOutputScreenCommand 0c0h
-   jmp correctLcdCursor
-checkSecondLcdRow:
-   cmp dl,40
-   jne checkThirdLcdRow
-   mOutputScreenCommand 094h
-   jmp correctLcdCursor
-checkThirdLcdRow:
-   cmp dl,60
-   jne checkZerothLcdRow
-   mOutputScreenCommand 0d4h
-   jmp correctLcdCursor
-checkZerothLcdRow:
+
+   xor ax,ax         ;see if dl is now a multiple of 20
+   mov al,dl
+   mov bl,20
+   div bl
+   cmp ah,00h
+   jne correctLcdCursor
+   
+   ;need to move the cursor on the screen
+   mov bx,offset screenLines
+   dec ax            ;shift to 0-based counting
+   add bx,ax
+   mOutputScreenCommand cs:[bx]
+
    cmp dl,80
    jne correctLcdCursor
-   mOutputScreenCommand 080h
-   xor dl,dl
-   jmp correctLcdCursor
+   xor dl,dl         ;restart at beginning
 
 correctLcdCursor:
    mov [currentLcdCursor],dl
    
-   pop ds,dx
+   pop ds,dx,bx,ax
    ret
 pOutputScreenData endp
 
@@ -71,6 +69,35 @@ mOutputDecodedByte macro
    and dl,10111111xb ;send data without enable 
    mov [lcdOffset],dl
 #em
+
+;inputs:    dl - the command to be sent to the screen
+;           dh - upper 4 bits are to distinguish between data and command
+;outputs    none, al sent to the screen
+pOutputToScreen proc near
+   push ds,dx
+   
+   mov ds,lcdSegment
+   
+   shr dl,1
+   shr dl,1
+   shr dl,1
+   shr dl,1
+   or dl,dh
+   mOutputDecodedByte;output first nibble
+
+   nop               ;wait before sending next data
+   nop
+   nop
+
+   pop dx            ;refresh dx
+   push dx
+   and dl,0fh        ;clear upper nibble 
+   or dl,dh
+   mOutputDecodedByte;output second nibble
+
+   pop dx,ds
+   ret
+pOutputToScreen endp
 
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
@@ -198,15 +225,14 @@ pScrollWindowDown proc near
    ret
 pScrollWindowDown endp
 
-;inputs:    ds - RAM segment
-;           al - the character to print
+;inputs:    al - the character to print
 ;              if al = 0ah, then spaces are put in RAM til EOL
 ;outputs:   character put in display RAM
 ;           if cursor is not currently visible, screen scrolled to cursor first
 pPrintCharacterToRam proc near 
-   push bx,dx
+   push bx,dx,ds
    
-   mov ds,0000h      ;change to RAM segment
+   mov ds,ramSegment ;change to RAM segment
 
    call pGetCursorPosition    ;dh = row, dl = column
    call pConvertToRamOffset   ;bx = RAM offset given dx
@@ -243,7 +269,7 @@ doNotAdd20h:
 lastScreenUsedValid:
    call pMakeCursorVisible ;ensure cursor is visible
    
-   pop dx,bx
+   pop ds,dx,bx
    ret
 pPrintCharacterToRam endp
 
@@ -315,54 +341,22 @@ validCursorRow:
    ret
 pValidateRowAndColumn endp
 
-;input:     dx - row and column
-;output:    bx - 20*dh+dl
+;input:     dh - row
+;           dl - column
+;output:    bx - 20*dh+dl+screenData offset in RAM
 pConvertToRamOffset proc near
    push ax,dx
 
-   xor bx,bx         ;clear bx
-   mov bl,dh         ;put row in bx
-   
-   shl bx,1          ;multiply by 4
-   shl bx,1
-   mov ax,bx
-   shl bx,1          ;multiply by 4 again
-   shl bx,1
-   add bx,ax         ;16*dh+4*dh
+   xor ax,ax
+   mov al,dh
+   mov dh,20
+   mul dh            ;multiply row by 20
 
    xor dh,dh         ;clear row to only have column
-   add bx,dx         ;add in column
+   add ax,dx         ;add in column
+   add ax,screenData ;shift by starting offset
 
-   add bx,screenData ;shift by starting offset
+   mov bx,ax
 
    pop dx,ax
 pConvertToRamOffset endp
-
-;inputs:    dl - the command to be sent to the screen
-;           dh - upper 4 bits are to distinguish between data and command
-;outputs    none, al sent to the screen
-pOutputToScreen proc near
-   push ds,dx
-   
-   mov ds,lcdSegment
-   
-   shr dl,1
-   shr dl,1
-   shr dl,1
-   shr dl,1
-   or dl,dh
-   mOutputDecodedByte;output first nibble
-
-   nop               ;wait before sending next data
-   nop
-   nop
-
-   pop dx            ;refresh dx
-   push dx
-   and dl,0fh        ;clear upper nibble 
-   or dl,dh
-   mOutputDecodedByte;output second nibble
-
-   pop dx,ds
-   ret
-pOutputToScreen endp
