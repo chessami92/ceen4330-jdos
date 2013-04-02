@@ -4,18 +4,18 @@
 lcdCommandBits EQU 10000000xb
 lcdDataBits    EQU 10100000xb
 
-;inputs:    command code to send
+;inputs:    dl - command code to send
 ;outputs:   sends command with 40us of delay
-mOutputScreenCommand macro
+pOutputScreenCommand proc near
    push dx
    
    mov dh,lcdCommandBits
-   mov dl,#1
    call pOutputToScreen
    mDelay40us
    
    pop dx
-#em
+   ret
+pOutputScreenCommand endp
 
 ;command to send to change to row 1, 2, 3, and 0 respectively
 screenLines db 0c0h, 094h, 0d4h, 080h
@@ -41,10 +41,13 @@ pOutputScreenData proc near
    jne correctLcdCursor
    
    ;need to move the cursor on the screen
-   mov bx,offset screenLines
    dec ax            ;shift to 0-based counting
+   add ax,offset screenLines
    add bx,ax
-   mOutputScreenCommand cs:[bx]
+   push dx
+   mov dl,cs:[bx]
+   call pOutputScreenCommand
+   pop dx
 
    cmp dl,80
    jne correctLcdCursor
@@ -150,26 +153,32 @@ int10h endp
 ;inputs:    none
 ;outputs:   none, display initialized and ready to use
 pInitializeDisplay proc near
-   push ds
+   push dx,ds
 
    mov ds,lcdSegment
 
    mDelayMs 15       ;must to wait 15ms before setup is allowed
    
-   mOutputScreenCommand 30h   ;base initialization
+   mov dl,30h
+   call pOutputScreenCommand
    mDelayMs 5
-   mOutputScreenCommand 30h
+   call pOutputScreenCommand
    mDelay40us
    mDelay40us
-   mOutputScreenCommand 30h
+   call pOutputScreenCommand
 
-   mOutputScreenCommand 28h   ;function set to 4-bit interface, 5x8 dot font
-   mOutputScreenCommand 08h   ;display off
-   mOutputScreenCommand 01h   ;clear display
+   mov dl,28h
+   call pOutputScreenCommand  ;function set to 4-bit interface, 5x8 dot font
+   mov dl,08h
+   call pOutputScreenCommand  ;display off
+   mov dl,01h
+   call pOutputScreenCommand  ;clear display
    mDelayMs 2
-   mOutputScreenCommand 0fh   ;display on, blinking cursor
-   mOutputScreenCommand 06h   ;entry mode, auto-increment
-   pop ds
+   mov dl,0fh
+   call pOutputScreenCommand  ;display on, blinking cursor
+   mov dl,06h
+   call pOutputScreenCommand  ;entry mode, auto-increment
+   pop dx,ds
 
    push ax,cx,di,es
 
