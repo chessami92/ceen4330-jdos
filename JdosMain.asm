@@ -82,29 +82,76 @@ mOutputSplashScreen macro
    pop ds,dx,ax
 #em
 
+memoryGood db ' Memory test passed ', 0
+memoryBad db  ' Memory test failed ', 0
+;inputs:    none
+;outputs:   none - memory checked by storing words on both even and odd addresses.
+;              If bad, it is printed on the LCD, likewise for good
+pTestMemory proc near
+   push ax,bx,cx,dx,ds,si
+
+   mov ds,ramSegment ;begin at top of RAM, work way down
+   xor ax,ax
+   mov bx,0fffeh
+
+   mov cx,0aaaah
+   mov dx,05555h
+
+checkRam:
+   call pOutputToLeds
+   mov si,[bx]       ;save memory data
+
+   mov [bx],cx
+   cmp cx,[bx]
+   jne memoryTestFailed
+   mov [bx],dx
+   cmp dx,[bx]
+   jne memoryTestFailed
+   mov [bx],si       ;restore memory data
+   dec bx
+   jnc checkRam
+
+   mov dx,offset memoryGood
+   jmp displayTestResult
+
+memoryTestFailed:
+   mov dx,offset memoryBad
+
+displayTestResult:
+   mov ah,09h
+   mov ds,romSegment
+   int 21h
+   pop si,ds,dx,cx,bx,ax
+   ret
+pTestMemory endp
+
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
 pJdosInit proc far
-   cli               ;make sure no interrupts while initializing
+   xor ax,ax
+   xor bx,bx
+   xor cx,cx
+   xor dx,dx
 
    mInitializeStackPointer
    mLoadInterruptVectorTable
    mInitializeInterruptController
    mInitializeKeyboard
    mInitializeDisplay
+   call pTestMemory
    mOutputSplashScreen
    
    ;int 02h TODO: dump memory to see what is the default interrupt - should be iret
 
    sti               ;allow interrupts now that IVT is initialized
    
-   mov ax,0aaaah
-   mov bl,0aah
+   mov bx,0aaaah
+   mov al,0aah
 
 ledFlashing:
-   xor ax,0ffffh
-   xor bl,0ffh
+   xor bx,0ffffh
+   xor al,0ffh
    call pOutputToLeds
    mDelayMs 200
    jmp ledFlashing

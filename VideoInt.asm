@@ -296,8 +296,6 @@ pPrintCurrentScreen proc near
    
    push ax
    mov ax,si
-   call pOutputToLeds
-   mDelayMs 5000
    pop ax
 
    mov cx,80         ;characters to print

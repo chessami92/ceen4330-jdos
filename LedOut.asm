@@ -1,5 +1,5 @@
-;inputs:    ax - lower 16 bits of pattern
-;           bl - lower nibble is most significant 4 bits
+;inputs:    bx - lower 16 bits of pattern
+;           al - lower nibble is most significant 4 bits
 ;outputs:   pattern displayed to LEDs
 pOutputToLeds proc near
    push ds
@@ -10,9 +10,9 @@ pOutputToLeds proc near
    mov B[keyboardCommand],10010000b
 
    ;data for LEDs
-   mov [keyboardData],al
-   mov [keyboardData],ah
    mov [keyboardData],bl
+   mov [keyboardData],bh
+   mov [keyboardData],al
    mov B[keyboardData],00h
    
    pop ds
