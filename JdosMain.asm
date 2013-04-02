@@ -21,8 +21,8 @@ mLoadInterruptVectorTable macro
 
    mov cx,256        ;how many entries in the IVT
 
-   mov ax,defaultInterrupt
-   mov bx,0f000h
+   mov ax,offset defaultInterrupt
+   mov bx,romSegment
 
 storeDefaultInformation:
    stosb             ;store IP
@@ -31,8 +31,8 @@ storeDefaultInformation:
    xchg ax,bx
    loop storeDefaultInformation
 
-   xor ah,ah         ;make sure ah is cleared, otherwise address wil be wrong
 storeDefinedInterrupts:
+   xor ah,ah         ;make sure ah is cleared, otherwise address wil be wrong
    lodsb             ;get which interrupt is to be stored
    mov di,ax
    shl di,1          ;multiply by 4 to get address
@@ -60,6 +60,28 @@ mInitializeInterruptController macro
    pop ds
 #em
 
+mInitializeKeyboard macro
+   mov ah,04h
+   int 16h
+#em
+
+mInitializeDisplay macro
+   xor ah,ah
+   int 10h
+#em
+
+splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', 20 DUP '*', 0
+mOutputSplashScreen macro
+   push ax,dx,ds
+   
+   mov ah,09h
+   mov ds,romSegment
+   mov dx,offset splashScreen
+   int 21h
+   
+   pop ds,dx,ax
+#em
+
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
@@ -69,23 +91,23 @@ pJdosInit proc far
    mInitializeStackPointer
    mLoadInterruptVectorTable
    mInitializeInterruptController
+   mInitializeKeyboard
+   mInitializeDisplay
+   mOutputSplashScreen
    
-   mov ah,04h        ;initialize the keyboard
-   int 16h
-   xor ah,ah         ;initialize the display
-   int 05h
+   ;int 02h TODO: dump memory to see what is the default interrupt - should be iret
 
    sti               ;allow interrupts now that IVT is initialized
    
    mov ax,0aaaah
    mov bl,0aah
 
-stall:
+ledFlashing:
    xor ax,0ffffh
    xor bl,0ffh
    call pOutputToLeds
-   mDelayMs 200      ;delay 1 second
-   jmp stall
-
-   ret               ;included for consistency, but never reached 
+   mDelayMs 200
+   jmp ledFlashing
+   
+   ;no return because this procedure was jumped to, not called
 pJdosInit endp
