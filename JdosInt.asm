@@ -38,7 +38,16 @@ int21h endp
 pInputWithEcho proc near
    push dx
 
+   call pMakeCursorVisible
+   mov ah,0ah
+   int 10h
+   mov dl,0fh        ;display on, blinking cursor
+   call pOutputScreenCommand
+
    call pInputWithoutEcho
+
+   mov dl,0ch        ;display on, no cursor
+   call pOutputScreenCommand
 
    mov dl,al
    mov ah,09h        ;print character to memory
@@ -55,32 +64,8 @@ pInputWithEcho endp
 pInputWithoutEcho proc near
    push dx
    
-   mov ah,03h
-   int 10h           ;dh = cursor row, dl = cursor column
-   cmp dl,00h
-   jne cursorNotAtBeginningOfRow
-   ;TODO: convert to int 10h call
-   push ds
-   mov ds,ramSegment
-   xor dx,dx
-   mov dh,[currentPrintRow]
-   inc dh
-   call pValidateRowAndColumn
-   mov [currentPrintRow],dh
-   mov ah,0ah
-   int 10h
-   
-   pop ds
-   
-cursorNotAtBeginningOfRow:
-   mov dl,0fh        ;display on, blinking cursor
-   call pOutputScreenCommand
-   
    xor ah,ah
    int 16h
-
-   mov dl,0ch        ;display on, no cursor
-   call pOutputScreenCommand
 
    pop dx
    ret
@@ -89,26 +74,41 @@ pInputWithoutEcho endp
 ;inputs:    ds:dx - string address
 ;outputs:   none - prints until a null byte is encountered
 pStringOutput proc near
-   push ax,dx,si,es,di
+   push ax,dx,si
    
    mov si,dx
-   mov ah,03h        ;get cursor position code for int 10h
-   mov es,ramSegment
-   int 10h           ;dh = row, dl = column
-   call pConvertToRamOffset ;di = correct destination
-   cld               ;increment SI on lodsb
+   mov ah,09h        ;function code to print character
 
 printCharacter:
-   lodsb
-   cmp al,00h
+   mov dl,[si]
+   cmp dl,00h
    je outputStringComplete
-   stosb
+   int 10h
    jmp printCharacter
 
 outputStringComplete:
    mov ah,0ah        ;refresh the screen
    int 10h  
 
-   pop di,es,si,dx,ax
+   pop si,dx,ax
    ret
 pStringOutput endp
+
+;inputs:    none
+;outputs:   none, RAM pointers updated as appropriate
+pMakeCursorVisible proc near
+   push dx
+
+   call pGetCursorPosition
+   cmp dl,00h
+   jne notBeginningOfLine
+   dec dh            ;skip back 5 lines instead of just 4
+
+notBeginningOfLine:
+   add dh,1dh        ;fast way to go back 4 rows and still include cursor row
+   call pValidateRowAndColumn
+   mov [currentPrintRow],dh
+
+   pop dx
+pMakeCursorVisible endp
+

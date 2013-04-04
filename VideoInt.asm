@@ -138,7 +138,7 @@ checkScrollWindowDown:
 checkPrintCharacterToRam:
    cmp ah,09h
    jne checkPrintCurrentScreen
-   call pPrintCharacterToRam
+   call pPrintCharacter
    jmp videoInterruptComplete
 
 checkPrintCurrentScreen:
@@ -228,17 +228,49 @@ pGetCursorPosition proc near
    ret
 pGetCursorPosition endp
 
-;inputs:    al - number of lines to scroll up,
-;              al=00h means to clear display
-;outputs:   none - does not update cursor
+;inputs:    none
+;outputs:   none - decrements the current print row
 pScrollWindowUp proc near
+   push bx,dx,ds
+
+   mov ds,ramSegment
+   xor dx,dx
+   mov dh,[currentPrintRow]
+   add dh,numScreenLines - 1
+   call pValidateRowAndColumn
+
+   mov bx,dx         ;see if trying to look past end of buffer
+   call pGetCursorPosition
+   cmp dh,bh
+   je cannotScrollBack
+   mov [currentPrintRow],bh
+   
+cannotScrollBack:
+   pop ds,dx,bx
    ret
 pScrollWindowUp endp
 
-;inputs:    al - number of lines to scroll down
-;outputs:   none - does not update cursor
+;inputs:    none
+;outputs:   none - increments the current print row
 pScrollWindowDown proc near
-   ;TODO: show or hide cursor as necessary
+   push bx,dx,ds
+
+   mov ds,ramSegment
+   xor dx,dx
+   mov dh,[currentPrintRow]
+   inc dh
+   call pValidateRowAndColumn
+
+   mov bx,dx         ;see if already at newest part of buffer
+   call pGetCursorPosition
+   add dh,numScreenLines - 3
+   call pValidateRowAndColumn
+   cmp dh,bh
+   je cannotScrollForward
+   mov [currentPrintRow],bh
+
+cannotScrollForward:
+   pop ds,dx,bx
    ret
 pScrollWindowDown endp
 
@@ -246,7 +278,7 @@ pScrollWindowDown endp
 ;              if dl = 0ah, then spaces are put in RAM til EOL
 ;outputs:   character put in display RAM
 ;           if cursor is not currently visible, screen scrolled to cursor first
-pPrintCharacterToRam proc near 
+pPrintCharacter proc near 
    push ax,bx,dx,ds
    
    mov al,dl         ;put new character in al
@@ -272,11 +304,10 @@ nonNewLine:
 
 characterInRam:
    call pSetCursorPosition ;update cursor position
-   call pMakeCursorVisible ;ensure cursor is visible
    
    pop ds,dx,bx,ax
    ret
-pPrintCharacterToRam endp
+pPrintCharacter endp
 
 ;inputs:    none
 ;outputs:   none, prints 4, 20 character rows starting at the currentPrintRow in RAM
@@ -319,23 +350,6 @@ printedToCursorLocation:
    pop ds,dx,cx,bx
    ret
 pPrintCurrentScreen endp
-
-;inputs:    none
-;outputs:   none, RAM pointers updated as appropriate
-pMakeCursorVisible proc near
-   push dx
-
-   call pGetCursorPosition
-   cmp dl,00h
-   jne notBeginningOfLine
-   dec dh            ;skip back 5 lines instead of just 4
-notBeginningOfLine:
-   add dh,1dh        ;fast way to go back 4 rows and still include cursor row
-   call pValidateRowAndColumn
-   mov [currentPrintRow],dh
-
-   pop dx
-pMakeCursorVisible endp
 
 ;inputs:    dh - row
 ;           dl - column

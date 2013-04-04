@@ -7,6 +7,7 @@ cursorRow EQU 0fd6dh
 currentPrintRow EQU 0fd6eh    ;location in RAM of starting character on LCD - 4 rows are displayed
 lastScreenUsed EQU 0fd6fh     ;last screen that has been used - after 4 rows is oldest row (will be overwritten next)
 screenData EQU 0fd70h         ;32 lines of 20 character, or 280h bytes of video data
+numScreenLines EQU 32
 
 keyboardPointers EQU 0fff0h   ;meta-data for queue
 keyboardQueue EQU 0fff1h      ;actual ascii key entry queue
