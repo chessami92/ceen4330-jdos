@@ -1,4 +1,3 @@
-
 ;inputs:    none
 ;outputs:   ss - set to a valid point in ram
 ;           sp - points
@@ -13,18 +12,17 @@ mInitializeStackPointer macro
 mLoadInterruptVectorTable macro
    push es,ds,di,si,ax,bx,cx
 
-   xor cx,cx
-   mov es,cx         ;point to beginning of RAM
-   mov di,cx
-   mov ds,0f000h     ;point to beginning of ROM
+   mov es,0000h
+   xor di,di
+   mov ds,0f000h
    mov si,offset interruptTable
 
    cld               ;increment on string instructions
 
    mov cx,256        ;how many entries in the IVT
 
-   mov ax,defaultInterrupt
-   mov bx,0f000h
+   mov ax,offset defaultInterrupt
+   mov bx,romSegment
 
 storeDefaultInformation:
    stosb             ;store IP
@@ -33,8 +31,8 @@ storeDefaultInformation:
    xchg ax,bx
    loop storeDefaultInformation
 
-   xor ah,ah         ;make sure ah is cleared, otherwise address wil be wrong
 storeDefinedInterrupts:
+   xor ah,ah         ;make sure ah is cleared, otherwise address wil be wrong
    lodsb             ;get which interrupt is to be stored
    mov di,ax
    shl di,1          ;multiply by 4 to get address
@@ -49,10 +47,9 @@ storeDefinedInterrupts:
 #em
 
 mInitializeInterruptController macro
-   push ax,ds
+   push ds
 
-   mov ax,intControllerSegment
-   mov ds,ax
+   mov ds,intControllerSegment
 
    mov B[intCommand1],00011011xb ;level triggered, single, ICW4 needed 
    mov B[intCommand2],00001000xb ;start address of 08h
@@ -60,33 +57,105 @@ mInitializeInterruptController macro
 
    mov B[intCommand2],11111100xb ;ignore interrupts 2-7 as they are not connected
 
-   pop ds,ax
+   pop ds
 #em
+
+mInitializeKeyboard macro
+   mov ah,04h
+   int 16h
+#em
+
+mInitializeDisplay macro
+   xor ah,ah
+   int 10h
+#em
+
+splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', 20 DUP '*', 0
+mOutputSplashScreen macro
+   push ax,dx,ds
+   
+   mov ah,09h
+   mov ds,romSegment
+   mov dx,offset splashScreen
+   int 21h
+   
+   pop ds,dx,ax
+#em
+
+memoryGood db ' Memory test passed ', 0
+memoryBad db  ' Memory test failed ', 0
+;inputs:    none
+;outputs:   none - memory checked by storing words on both even and odd addresses.
+;              If bad, it is printed on the LCD, likewise for good
+pTestMemory proc near
+   push ax,bx,cx,dx,ds,si
+
+   mov ds,ramSegment ;begin at top of RAM, work way down
+   xor ax,ax
+   mov bx,0fffeh
+
+   mov cx,0aaaah
+   mov dx,05555h
+
+checkRam:   
+   mov si,[bx]       ;save memory data
+   mov [bx],cx       ;test with aaaah
+   cmp cx,[bx]
+   jne memoryTestFailed
+   mov [bx],dx       ;test with 5555h
+   cmp dx,[bx]
+   jne memoryTestFailed
+   mov [bx],si       ;restore memory data
+   dec bx
+   jnz checkRam
+
+   mov dx,offset memoryGood
+   jmp displayTestResult
+
+memoryTestFailed:
+   call pOutputToLeds
+   mov dx,offset memoryBad
+
+displayTestResult:
+   mov ah,09h
+   mov ds,romSegment
+   ;int 21h
+
+   pop si,ds,dx,cx,bx,ax
+   ret
+pTestMemory endp
 
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
 pJdosInit proc far
-   cli               ;make sure no interrupts while initializing
+   xor ax,ax
+   xor bx,bx
+   xor cx,cx
+   xor dx,dx
 
    mInitializeStackPointer
-
    mLoadInterruptVectorTable
-
    mInitializeInterruptController
+   mInitializeKeyboard
+   mInitializeDisplay
+   call pTestMemory
+   mOutputSplashScreen
    
-   mov ah,04h        ;initialize the keyboard
-   int 16h
-     
-   xor ah,ah         ;initialize the display
-   int 05h
+   ;int 02h TODO: dump memory to see what is the default interrupt - should be iret
 
    sti               ;allow interrupts now that IVT is initialized
+   
+   mov bx,0aaaah
+   mov al,0aah
 
+ledFlashing:
+   mov ah,01h
+   int 21h
+   not bx
+   not al
    call pOutputToLeds
-
-stall:
-   jmp stall
-
-   ret               ;included for consistency, but never reached 
+   jmp ledFlashing
+   
+   ;no return because this procedure was jumped to, not called
 pJdosInit endp
