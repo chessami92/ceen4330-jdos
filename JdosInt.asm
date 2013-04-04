@@ -3,6 +3,12 @@
 ;inputs:    ah - function code
 ;outputs:   dependent on function code
 int21h proc far
+checkBackToMainMenu:
+   cmp ah,00h
+   jne checkInputWithEcho
+   ;TODO: write procedure to pop stack back to main program. Be careful!
+   jmp osInterruptComplete
+   
 checkInputWithEcho:
    cmp ah,01h
    jne checkInputWithoutEcho
@@ -35,7 +41,9 @@ pInputWithEcho proc near
    call pInputWithoutEcho
 
    mov dl,al
-   mov ah,09h
+   mov ah,09h        ;print character to memory
+   int 10h
+   mov ah,0ah        ;refresh screen
    int 10h
    
    pop dx
@@ -46,10 +54,28 @@ pInputWithEcho endp
 ;outputs:   al - input character
 pInputWithoutEcho proc near
    push dx
-
+   
+   mov ah,03h
+   int 10h           ;dh = cursor row, dl = cursor column
+   cmp dl,00h
+   jne cursorNotAtBeginningOfRow
+   ;TODO: convert to int 10h call
+   push ds
+   mov ds,ramSegment
+   xor dx,dx
+   mov dh,[currentPrintRow]
+   inc dh
+   call pValidateRowAndColumn
+   mov [currentPrintRow],dh
+   mov ah,0ah
+   int 10h
+   
+   pop ds
+   
+cursorNotAtBeginningOfRow:
    mov dl,0fh        ;display on, blinking cursor
    call pOutputScreenCommand
-
+   
    xor ah,ah
    int 16h
 

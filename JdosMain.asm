@@ -97,32 +97,30 @@ pTestMemory proc near
    mov cx,0aaaah
    mov dx,05555h
 
-checkRam:
-   call pOutputToLeds
+checkRam:   
    mov si,[bx]       ;save memory data
-
-   mov [bx],cx
+   mov [bx],cx       ;test with aaaah
    cmp cx,[bx]
    jne memoryTestFailed
-   mov [bx],dx
+   mov [bx],dx       ;test with 5555h
    cmp dx,[bx]
    jne memoryTestFailed
    mov [bx],si       ;restore memory data
    dec bx
-   jnc checkRam
+   jnz checkRam
 
    mov dx,offset memoryGood
    jmp displayTestResult
 
 memoryTestFailed:
+   call pOutputToLeds
    mov dx,offset memoryBad
 
 displayTestResult:
    mov ah,09h
    mov ds,romSegment
-   int 21h
+   ;int 21h
 
-   mDelayMs 1000
    pop si,ds,dx,cx,bx,ax
    ret
 pTestMemory endp
@@ -152,10 +150,11 @@ pJdosInit proc far
    mov al,0aah
 
 ledFlashing:
+   mov ah,01h
+   int 21h
    not bx
    not al
    call pOutputToLeds
-   mDelayMs 200
    jmp ledFlashing
    
    ;no return because this procedure was jumped to, not called
