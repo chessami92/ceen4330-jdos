@@ -73,7 +73,7 @@ mInsertIfNotFull macro
    pop ds,bx
 #em
 
-scanAsciiTable db 08h, ')^_>~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~45dc6~~~12fe3~~~'
+scanAsciiTable db 08h, ')[] ~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0{} ~~~78ba9~~~45dc6~~~12fe3~~~'
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
