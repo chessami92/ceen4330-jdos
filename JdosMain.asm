@@ -70,20 +70,8 @@ mInitializeDisplay macro
    int 10h
 #em
 
-splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', 20 DUP '*', 0
-mOutputSplashScreen macro
-   push ax,dx,ds
-   
-   mov ah,09h
-   mov ds,romSegment
-   mov dx,offset splashScreen
-   int 21h
-   
-   pop ds,dx,ax
-#em
-
-memoryGood db ' Memory test passed ', 0
-memoryBad db  ' Memory test failed ', 0
+memoryGood db '*Memory test passed*', 0
+memoryBad db  '*Memory test failed*', 0
 ;inputs:    none
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
@@ -119,11 +107,26 @@ memoryTestFailed:
 displayTestResult:
    mov ah,09h
    mov ds,romSegment
-   ;int 21h
+   int 21h
 
    pop si,ds,dx,cx,bx,ax
    ret
 pTestMemory endp
+
+splashScreen db 20 DUP '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
+mOutputSplashScreen macro
+   push ax,dx,ds
+   
+   mov ah,09h
+   mov ds,romSegment
+   mov dx,offset splashScreen
+   int 21h
+
+   mov ah,07h        ;wait for a key press
+   int 21h
+   
+   pop ds,dx,ax
+#em
 
 ;First point of entry for the microprocessor.
 ;inputs:    none

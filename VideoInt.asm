@@ -204,7 +204,6 @@ pInitializeDisplay endp
 ;outputs:   cursor changed to position dh:dl
 ;           screen updated if cursor not present on current rows
 pSetCursorPosition proc near
-   ;TODO: show or hide cursor as necessary
    push ds
    
    call pValidateRowAndColumn
@@ -299,6 +298,10 @@ putSpacesInRam:
    jne putSpacesInRam
 
 nonNewLine:
+   cmp al,08h
+   jne nonBackspace
+
+nonBackspace:
    mov [bx],al       ;store character in RAM
    inc dl            ;increment column
 

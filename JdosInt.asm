@@ -64,8 +64,11 @@ pInputWithEcho endp
 pInputWithoutEcho proc near
    push dx
    
+inputCharacterAgain:
    xor ah,ah
    int 16h
+   call pCheckSpecialCharacters
+   jc inputCharacterAgain
 
    pop dx
    ret
@@ -94,6 +97,54 @@ outputStringComplete:
    ret
 pStringOutput endp
 
+;inputs:    al - inputted character
+;outputs:   carry flag set if it was a special keystroke
+pCheckSpecialCharacters proc near
+   push ax
+
+checkScrollUpLine:
+   cmp al,'['
+   jne checkScrollUpPage
+   mov ah,03h
+   int 10h
+   stc
+   jmp doneCheckingCharacter
+checkScrollUpPage:
+   cmp al,'{'
+   jne checkScrollDownLine
+   mov ah,03h
+   int 10h
+   int 10h
+   int 10h
+   int 10h
+   stc
+   jmp doneCheckingCharacter
+checkScrollDownLine:
+   cmp al,']'
+   jne checkScrollDownPage
+   mov ah,06h
+   int 10h
+   stc
+   jmp doneCheckingCharacter
+checkScrollDownPage:
+   cmp al,'}'
+   jne noSpecialCharacter
+   mov ah,06h
+   int 10h
+   int 10h
+   int 10h
+   int 10h
+   stc
+   jmp doneCheckingCharacter
+
+noSpecialCharacter:
+   clc
+
+doneCheckingCharacter:
+   pop ax
+   ret
+pCheckSpecialCharacters endp
+
 ;inputs:    none
 ;outputs:   none, RAM pointers updated as appropriate
 pMakeCursorVisible proc near
@@ -111,4 +162,3 @@ notBeginningOfLine:
 
    pop dx
 pMakeCursorVisible endp
-
