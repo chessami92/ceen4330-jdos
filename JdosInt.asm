@@ -97,34 +97,33 @@ pStringOutput endp
 ;inputs:    al - inputted character
 ;outputs:   carry flag set if it was a special keystroke
 pCheckSpecialCharacters proc near
-   push ax
+   push ax,bx
    
-checkScrollUpOne:
-   mov ah,06h
-   cmp al,'['
+   mov bl,al
+   
+   mov ax,0601h      ;set up for scrolling up once
+   cmp bl,'['
    je scrollOnce
-   cmp al,'{'
+   cmp bl,'{'
    je scrollFourTimes
-   mov ah,07h
-   cmp al,']'
+   mov ah,07h        ;set up for scrolling down
+   cmp bl,']'
    je scrollOnce
-   cmp al,'}'
+   cmp bl,'}'
    je scrollFourTimes
    clc
    jne doneCheckingSpecial
    
 scrollFourTimes:
-   int 10h
-   int 10h
-   int 10h
+   mov al,04h
 scrollOnce:
-   int 10h
+   int 10h           ;scroll screen
    mov ah,0ah
-   int 10h
+   int 10h           ;refresh screen
    stc
    
 doneCheckingSpecial:
-   pop ax
+   pop bx,ax
    ret
 pCheckSpecialCharacters endp
 

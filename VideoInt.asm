@@ -225,13 +225,15 @@ pGetCursorPosition proc near
    ret
 pGetCursorPosition endp
 
-;inputs:    none
+;inputs:    al - number of lines to scroll
 ;outputs:   none - decrements the current print row
 pScrollWindowUp proc near
-   push bx,dx,ds
+   push ax,bx,dx,ds
 
    mov ds,ramSegment
    xor dx,dx
+
+scrollWindowUp:
    mov dh,[currentPrintRow]
    add dh,numScreenLines - 1
    call pValidateRowAndColumn
@@ -241,19 +243,23 @@ pScrollWindowUp proc near
    cmp dh,bh
    je cannotScrollBack
    mov [currentPrintRow],bh
+   dec al
+   jnz scrollWindowUp
    
 cannotScrollBack:
-   pop ds,dx,bx
+   pop ds,dx,bx,ax
    ret
 pScrollWindowUp endp
 
-;inputs:    none
+;inputs:    al - number of lines to scroll
 ;outputs:   none - increments the current print row
 pScrollWindowDown proc near
-   push bx,dx,ds
+   push ax,bx,dx,ds
 
    mov ds,ramSegment
    xor dx,dx
+
+scrollWindowDown:
    mov dh,[currentPrintRow]
    inc dh
    call pValidateRowAndColumn
@@ -265,9 +271,11 @@ pScrollWindowDown proc near
    cmp dh,bh
    je cannotScrollForward
    mov [currentPrintRow],bh
+   dec al
+   jnz scrollWindowDown
 
 cannotScrollForward:
-   pop ds,dx,bx
+   pop ds,dx,bx,ax
    ret
 pScrollWindowDown endp
 

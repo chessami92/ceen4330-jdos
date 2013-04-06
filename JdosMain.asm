@@ -108,7 +108,6 @@ displayTestResult:
    mov ah,09h
    mov ds,romSegment
    int 21h
-   mDelayMs 1000
 
    pop si,ds,dx,cx,bx,ax
    ret
@@ -166,6 +165,6 @@ pMainMenu proc near
    int 21h
    
    pop ds,dx,ax
-   mDelayMs 2000
+   mDelayMs 50
    ret
 pMainMenu endp
