@@ -188,8 +188,6 @@ pInitializeDisplay proc near
    stosb             ;current lcd location is 0
    stosw             ;cursor is at row 0, column 0
    stosb             ;current row is 0
-   mov al,03h        ;last row printed is 3
-   stosb
 
    mov ax,2020h      ;set all display bytes to space
    mov cx,140h
@@ -243,8 +241,6 @@ pScrollWindowUp proc near
    cmp dh,bh
    je cannotScrollBack
    mov [currentPrintRow],bh
-   mov dl,0ch        ;display on, no cursor
-   call pOutputScreenCommand
    
 cannotScrollBack:
    pop ds,dx,bx
@@ -269,13 +265,8 @@ pScrollWindowDown proc near
    cmp dh,bh
    je cannotScrollForward
    mov [currentPrintRow],bh
-   jmp doneScrolling
 
 cannotScrollForward:
-   mov dl,0fh        ;display on, blinking cursor
-   call pOutputScreenCommand
-
-doneScrolling:
    pop ds,dx,bx
    ret
 pScrollWindowDown endp

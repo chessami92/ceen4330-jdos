@@ -70,8 +70,8 @@ mInitializeDisplay macro
    int 10h
 #em
 
-memoryGood db '*Memory test passed*', 0
-memoryBad db  '*Memory test failed*', 0
+memoryGood db ' Memory test passed ', 0
+memoryBad db  ' Memory test failed ', 0
 ;inputs:    none
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
@@ -108,12 +108,13 @@ displayTestResult:
    mov ah,09h
    mov ds,romSegment
    int 21h
+   mDelayMs 1000
 
    pop si,ds,dx,cx,bx,ax
    ret
 pTestMemory endp
 
-splashScreen db '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
+splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
 mOutputSplashScreen macro
    push ax,dx,ds
    
@@ -124,8 +125,6 @@ mOutputSplashScreen macro
 
    mov ah,07h        ;wait for a key press
    int 21h
-   mov ah,07h        ;wait for a key press
-   int 21h
    
    pop ds,dx,ax
 #em
@@ -134,11 +133,6 @@ mOutputSplashScreen macro
 ;inputs:    none
 ;outputs:   none
 pJdosInit proc far
-   xor ax,ax
-   xor bx,bx
-   xor cx,cx
-   xor dx,dx
-
    mInitializeStackPointer
    mLoadInterruptVectorTable
    mInitializeInterruptController
@@ -151,17 +145,27 @@ pJdosInit proc far
 
    sti               ;allow interrupts now that IVT is initialized
    
-   mov bx,0aaaah
-   mov al,0aah
-   
-ledFlashing:
-   mov ah,01h
-   int 21h
-   not bx
-   not al
-   call pOutputToLeds
-   mDelayMs 200
-   jmp ledFlashing
+callMainMenu:
+   call pMainMenu
+   jmp callMainMenu
    
    ;no return because this procedure was jumped to, not called
 pJdosInit endp
+
+mainMenuPrompt db 'This is a test of the menu!', 0
+;inputs:    none
+;outputs:   none
+pMainMenu proc near
+   push ax,dx,ds
+   
+   mov ds,romSegment
+   mov dx,offset mainMenuPrompt
+   mov ah,09h
+   int 21h
+   mov ah,07h
+   int 21h
+   
+   pop ds,dx,ax
+   mDelayMs 2000
+   ret
+pMainMenu endp

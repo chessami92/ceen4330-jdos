@@ -73,7 +73,7 @@ pInputWithoutEcho endp
 ;inputs:    ds:dx - string address
 ;outputs:   none - prints until a null byte is encountered
 pStringOutput proc near
-   push ax,dx,si
+   push ax,si,dx
    
    mov si,dx
    mov ah,09h        ;function code to print character
@@ -90,7 +90,7 @@ outputStringComplete:
    mov ah,0ah        ;refresh the screen
    int 10h  
 
-   pop si,dx,ax
+   pop dx,si,ax
    ret
 pStringOutput endp
 
@@ -98,31 +98,32 @@ pStringOutput endp
 ;outputs:   carry flag set if it was a special keystroke
 pCheckSpecialCharacters proc near
    push ax
-
-checkScrollUp:
-   cmp al,'['
-   jne checkScrollDown
-   mov ah,06h
-   int 10h
-   mov ah,0ah
-   int 10h
-   jmp specialCharacterFound
    
-checkScrollDown:
-   cmp al,']'
-   jne noSpecialCharacter
+checkScrollUpOne:
+   mov ah,06h
+   cmp al,'['
+   je scrollOnce
+   cmp al,'{'
+   je scrollFourTimes
    mov ah,07h
+   cmp al,']'
+   je scrollOnce
+   cmp al,'}'
+   je scrollFourTimes
+   clc
+   jne doneCheckingSpecial
+   
+scrollFourTimes:
    int 10h
-
-specialCharacterFound:
+   int 10h
+   int 10h
+scrollOnce:
+   int 10h
    mov ah,0ah
    int 10h
    stc
-   pop ax
-   ret
    
-noSpecialCharacter:
-   clc
+doneCheckingSpecial:
    pop ax
    ret
 pCheckSpecialCharacters endp
