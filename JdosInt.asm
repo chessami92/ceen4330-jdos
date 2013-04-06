@@ -39,8 +39,6 @@ pInputWithEcho proc near
    push dx
 
    call pMakeCursorVisible
-   mov ah,0ah
-   int 10h
    mov dl,0fh        ;display on, blinking cursor
    call pOutputScreenCommand
 
@@ -50,9 +48,7 @@ pInputWithEcho proc near
    call pOutputScreenCommand
 
    mov dl,al
-   mov ah,09h        ;print character to memory
-   int 10h
-   mov ah,0ah        ;refresh screen
+   mov ah,09h        ;print character
    int 10h
    
    pop dx
@@ -87,6 +83,7 @@ printCharacter:
    cmp dl,00h
    je outputStringComplete
    int 10h
+   inc si
    jmp printCharacter
 
 outputStringComplete:
@@ -102,45 +99,30 @@ pStringOutput endp
 pCheckSpecialCharacters proc near
    push ax
 
-checkScrollUpLine:
+checkScrollUp:
    cmp al,'['
-   jne checkScrollUpPage
-   mov ah,03h
+   jne checkScrollDown
+   mov ah,06h
    int 10h
-   stc
-   jmp doneCheckingCharacter
-checkScrollUpPage:
-   cmp al,'{'
-   jne checkScrollDownLine
-   mov ah,03h
+   mov ah,0ah
    int 10h
-   int 10h
-   int 10h
-   int 10h
-   stc
-   jmp doneCheckingCharacter
-checkScrollDownLine:
+   jmp specialCharacterFound
+   
+checkScrollDown:
    cmp al,']'
-   jne checkScrollDownPage
-   mov ah,06h
-   int 10h
-   stc
-   jmp doneCheckingCharacter
-checkScrollDownPage:
-   cmp al,'}'
    jne noSpecialCharacter
-   mov ah,06h
+   mov ah,07h
    int 10h
-   int 10h
-   int 10h
+
+specialCharacterFound:
+   mov ah,0ah
    int 10h
    stc
-   jmp doneCheckingCharacter
-
+   pop ax
+   ret
+   
 noSpecialCharacter:
    clc
-
-doneCheckingCharacter:
    pop ax
    ret
 pCheckSpecialCharacters endp
@@ -148,17 +130,22 @@ pCheckSpecialCharacters endp
 ;inputs:    none
 ;outputs:   none, RAM pointers updated as appropriate
 pMakeCursorVisible proc near
-   push dx
-
+   push ax,dx,ds
+   
+   mov ds,ramSegment
+   
    call pGetCursorPosition
-   cmp dl,00h
-   jne notBeginningOfLine
-   dec dh            ;skip back 5 lines instead of just 4
-
-notBeginningOfLine:
-   add dh,1dh        ;fast way to go back 4 rows and still include cursor row
+   add dh,1dh        ;fast way to go back 3 rows
    call pValidateRowAndColumn
+   mov dl,[currentPrintRow]
+   
+   cmp dl,dh         ;only refresh screen if necessary
+   je cursorIsVisible
    mov [currentPrintRow],dh
+   mov ah,0ah
+   int 10h
 
-   pop dx
+cursorIsVisible:
+   pop ds,dx,ax
+   ret
 pMakeCursorVisible endp

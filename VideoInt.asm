@@ -243,6 +243,8 @@ pScrollWindowUp proc near
    cmp dh,bh
    je cannotScrollBack
    mov [currentPrintRow],bh
+   mov dl,0ch        ;display on, no cursor
+   call pOutputScreenCommand
    
 cannotScrollBack:
    pop ds,dx,bx
@@ -262,13 +264,18 @@ pScrollWindowDown proc near
 
    mov bx,dx         ;see if already at newest part of buffer
    call pGetCursorPosition
-   add dh,numScreenLines - 3
+   add dh,numScreenLines - 2
    call pValidateRowAndColumn
    cmp dh,bh
    je cannotScrollForward
    mov [currentPrintRow],bh
+   jmp doneScrolling
 
 cannotScrollForward:
+   mov dl,0fh        ;display on, blinking cursor
+   call pOutputScreenCommand
+
+doneScrolling:
    pop ds,dx,bx
    ret
 pScrollWindowDown endp
@@ -279,6 +286,8 @@ pScrollWindowDown endp
 ;           if cursor is not currently visible, screen scrolled to cursor first
 pPrintCharacter proc near 
    push ax,bx,dx,ds
+   
+   call pOutputScreenData
    
    mov al,dl         ;put new character in al
    

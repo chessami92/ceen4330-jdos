@@ -73,7 +73,7 @@ mInsertIfNotFull macro
    pop ds,bx
 #em
 
-scanAsciiTable db 08h, ')[] ~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0{} ~~~78ba9~~~45dc6~~~12fe3~~~'
+scanAsciiTable db 08h, '){} ~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0[] ~~~78ba9~~~45dc6~~~12fe3~~~'
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
@@ -146,8 +146,8 @@ pReadCharacter proc near
    mov ds,ramSegment
 
 waitForCharacter:
-   sti
-   mDelayMs 50       ;allow keyboard interrupts for a while
+   sti               ;allow keyboard interrupts for a while
+   mDelayMs 1
    cli
    call pGetKeyboardPointers
    inc bl            ;point to next character
@@ -177,7 +177,7 @@ pInitializeKeyboard proc near
    mov B[keyboardCommand],11000001b ;clear FIFO and RAM
   
    mov ds,ramSegment ;set up head and tail pointer for RAM key queue
-   mov B[keyboardPointers],0dh
+   mov B[keyboardPointers],10h
 
    pop ds,ax
    ret

@@ -113,7 +113,7 @@ displayTestResult:
    ret
 pTestMemory endp
 
-splashScreen db 20 DUP '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
+splashScreen db '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
 mOutputSplashScreen macro
    push ax,dx,ds
    
@@ -122,6 +122,8 @@ mOutputSplashScreen macro
    mov dx,offset splashScreen
    int 21h
 
+   mov ah,07h        ;wait for a key press
+   int 21h
    mov ah,07h        ;wait for a key press
    int 21h
    
@@ -151,13 +153,14 @@ pJdosInit proc far
    
    mov bx,0aaaah
    mov al,0aah
-
+   
 ledFlashing:
    mov ah,01h
    int 21h
    not bx
    not al
    call pOutputToLeds
+   mDelayMs 200
    jmp ledFlashing
    
    ;no return because this procedure was jumped to, not called
