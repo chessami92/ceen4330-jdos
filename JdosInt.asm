@@ -75,6 +75,8 @@ pInputWithoutEcho endp
 pStringOutput proc near
    push ax,si,dx
    
+   call pMakeCursorVisible
+   
    mov si,dx
    mov ah,09h        ;function code to print character
 
@@ -87,6 +89,19 @@ printCharacter:
    jmp printCharacter
 
 outputStringComplete:
+   pop dx            ;see how many lines to scroll
+   push dx
+   sub si,dx
+   mov ax,si
+   mov dl,20
+   div dl
+   cmp al,3
+   jle scrollScreenToString
+   mov al,3
+
+scrollScreenToString:
+   mov ah,07h
+   int 10h   
    mov ah,0ah        ;refresh the screen
    int 10h  
 

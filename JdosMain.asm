@@ -151,7 +151,7 @@ callMainMenu:
    ;no return because this procedure was jumped to, not called
 pJdosInit endp
 
-mainMenuPrompt db 'This is a test of the menu!', 0
+mainMenuPrompt db '*****Main Menu******', 'Select an option', 0ah, '0 - New user guide', 0ah, 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
