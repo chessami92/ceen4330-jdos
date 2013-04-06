@@ -113,7 +113,7 @@ displayTestResult:
    ret
 pTestMemory endp
 
-splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', '***Press any key****', 0
+splashScreen db ' ', 18 DUP '*', ' *  CEEN 4330 2013  *','*  by Josh DeWitt  *', ' **Press any key***', 0
 mOutputSplashScreen macro
    push ax,dx,ds
    
@@ -151,12 +151,28 @@ callMainMenu:
    ;no return because this procedure was jumped to, not called
 pJdosInit endp
 
-mainMenuPrompt db '*****Main Menu******', 'Select an option', 0ah, '0 - New user guide', 0ah, 0
+;inputs:    none
+;outputs:   none, prints newline to screen
+pPrintNewLine proc near
+   push ax,dx
+
+   mov ah,09h
+   mov dl,0ah
+   int 10h
+   mov ah,0ah
+   int 10h
+
+   pop dx,ax
+pPrintNewLine endp
+
+mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
+               db 0ah, '2 - Play a song', 0ah, '3 - Memory debug', 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
    push ax,dx,ds
    
+   call pPrintNewLine
    mov ds,romSegment
    mov dx,offset mainMenuPrompt
    mov ah,09h
@@ -165,6 +181,5 @@ pMainMenu proc near
    int 21h
    
    pop ds,dx,ax
-   mDelayMs 50
    ret
 pMainMenu endp

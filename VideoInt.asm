@@ -131,11 +131,11 @@ checkScrollWindowUp:
 
 checkScrollWindowDown:
    cmp ah,07h
-   jne checkPrintCharacterToRam
+   jne checkPrintCharacter
    call pScrollWindowDown
    jmp videoInterruptComplete
 
-checkPrintCharacterToRam:
+checkPrintCharacter:
    cmp ah,09h
    jne checkPrintCurrentScreen
    call pPrintCharacter
@@ -286,14 +286,12 @@ pScrollWindowDown endp
 pPrintCharacter proc near 
    push ax,bx,dx,ds
    
-   call pOutputScreenData
-   
    mov al,dl         ;put new character in al
-   
    mov ds,ramSegment ;change to RAM segment
 
    call pGetCursorPosition    ;dh = row, dl = column
    call pConvertToRamOffset   ;bx = RAM offset given dx
+
    cmp al,0ah
    jne nonNewLine    ;else there is new line, print spaces til EOL
    
@@ -308,8 +306,28 @@ putSpacesInRam:
 nonNewLine:
    cmp al,08h
    jne nonBackspace
+   sub dl,1          ;make last character a space
+   jns noAdjustingRowColumn
+   mov dl,19         ;make end of row of last row
+   add dh,numScreenLines - 1
+   call pValidateRowAndColumn
+
+noAdjustingRowColumn:
+   call pConvertToRamOffset
+   mov B[bx],20h
+   push dx
+   mov dl,10h
+   call pOutputScreenCommand
+   mov dl,20h
+   call pOutputScreenData
+   pop dx
+   jmp characterInRam
 
 nonBackspace:
+   push dx
+   mov dl,al
+   call pOutputScreenData
+   pop dx
    mov [bx],al       ;store character in RAM
    inc dl            ;increment column
 

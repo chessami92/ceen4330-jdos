@@ -146,8 +146,8 @@ pReadCharacter proc near
    mov ds,ramSegment
 
 waitForCharacter:
-   sti               ;allow keyboard interrupts for a while
-   mDelayMs 1
+   sti               ;allow keyboard interrupts for an instruction
+   nop
    cli
    call pGetKeyboardPointers
    inc bl            ;point to next character
