@@ -70,18 +70,6 @@ mInitializeDisplay macro
    int 10h
 #em
 
-splashScreen db 20 DUP '*', '*  CEEN 4330 2013  *','*  by Josh DeWitt  *', 20 DUP '*', 0
-mOutputSplashScreen macro
-   push ax,dx,ds
-   
-   mov ah,09h
-   mov ds,romSegment
-   mov dx,offset splashScreen
-   int 21h
-   
-   pop ds,dx,ax
-#em
-
 memoryGood db ' Memory test passed ', 0
 memoryBad db  ' Memory test failed ', 0
 ;inputs:    none
@@ -119,21 +107,31 @@ memoryTestFailed:
 displayTestResult:
    mov ah,09h
    mov ds,romSegment
-   ;int 21h
+   int 21h
 
    pop si,ds,dx,cx,bx,ax
    ret
 pTestMemory endp
 
+splashScreen db ' ', 18 DUP '*', ' *  CEEN 4330 2013  *','*  by Josh DeWitt  *', ' **Press any key***', 0
+mOutputSplashScreen macro
+   push ax,dx,ds
+   
+   mov ah,09h
+   mov ds,romSegment
+   mov dx,offset splashScreen
+   int 21h
+
+   mov ah,07h        ;wait for a key press
+   int 21h
+   
+   pop ds,dx,ax
+#em
+
 ;First point of entry for the microprocessor.
 ;inputs:    none
 ;outputs:   none
 pJdosInit proc far
-   xor ax,ax
-   xor bx,bx
-   xor cx,cx
-   xor dx,dx
-
    mInitializeStackPointer
    mLoadInterruptVectorTable
    mInitializeInterruptController
@@ -146,16 +144,28 @@ pJdosInit proc far
 
    sti               ;allow interrupts now that IVT is initialized
    
-   mov bx,0aaaah
-   mov al,0aah
-
-ledFlashing:
-   mov ah,01h
-   int 21h
-   not bx
-   not al
-   call pOutputToLeds
-   jmp ledFlashing
+callMainMenu:
+   call pMainMenu
+   jmp callMainMenu
    
    ;no return because this procedure was jumped to, not called
 pJdosInit endp
+
+mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
+               db 0ah, '2 - Play a song', 0ah, '3 - Memory debug', 0
+;inputs:    none
+;outputs:   none
+pMainMenu proc near
+   push ax,dx,ds
+   
+   mOutputCharacter 0ah
+   mov ds,romSegment
+   mov dx,offset mainMenuPrompt
+   mov ah,09h
+   int 21h
+   mov dx,0003h
+   call pInputOneHex
+   
+   pop ds,dx,ax
+   ret
+pMainMenu endp

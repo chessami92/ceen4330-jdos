@@ -4,16 +4,18 @@
 ;outputs:   bh - head of queue
 ;           bl - tail of queue
 pGetKeyboardPointers proc near
-   push cx,ds
+   push ds
    
    mov ds,ramSegment
    mov bl,[keyboardPointers]
    mov bh,bl
    and bx,0f00fh     ;clear duplicate nibbles
-   mov cl,4
-   shr bh,cl         ;bh - head, bl - tail
+   shr bh,1          ;bh - head, bl - tail
+   shr bh,1
+   shr bh,1
+   shr bh,1
    
-   pop ds,cx
+   pop ds
    ret
 pGetKeyboardPointers endp
 
@@ -21,7 +23,7 @@ pGetKeyboardPointers endp
 ;           bl - tail of queue
 ;outputs:   none, stored back in memory in proper format
 pSetKeyboardPointers proc near
-   push bx,cx,ds
+   push bx,ds
    
    cmp bh,0fh        ;see if pointing to end of array
    jne ValidNewBh
@@ -38,13 +40,15 @@ validNewBl:
    je keyboardQueueFull
    
    mov ds,ramSegment
-   mov cl,4
-   shl bh,cl         ;re-construct pointer byte
+   shl bh,1          ;re-construct pointer byte
+   shl bh,1
+   shl bh,1
+   shl bh,1
    or bl,bh
    mov [keyboardPointers],bl
    
 keyboardQueueFull:
-   pop ds,cx,bx
+   pop ds,bx
    ret
 pSetKeyboardPointers endp
 
@@ -60,7 +64,7 @@ mInsertIfNotFull macro
    push bx
    mov bl,bh
    xor bh,bh
-   mov [bx + keyboardQueue],dl
+   mov [keyboardQueue + bx],dl
    pop bx
 
    inc bh            ;point to next location
@@ -69,7 +73,7 @@ mInsertIfNotFull macro
    pop ds,bx
 #em
 
-scanAsciiTable db 08h, ')^_>~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0^_>~~~78ba9~~~45dc6~~~12fe3~~~'
+scanAsciiTable db 08h, '){} ~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0[] ~~~78ba9~~~45dc6~~~12fe3~~~'
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
@@ -142,8 +146,8 @@ pReadCharacter proc near
    mov ds,ramSegment
 
 waitForCharacter:
-   sti
-   mDelayMs 50       ;allow keyboard interrupts for a while
+   sti               ;allow keyboard interrupts for an instruction
+   nop
    cli
    call pGetKeyboardPointers
    inc bl            ;point to next character
@@ -173,8 +177,7 @@ pInitializeKeyboard proc near
    mov B[keyboardCommand],11000001b ;clear FIFO and RAM
   
    mov ds,ramSegment ;set up head and tail pointer for RAM key queue
-   ;TODO: double-check this. The first character is always ignored. 
-   mov B[keyboardPointers],0Eh
+   mov B[keyboardPointers],10h
 
    pop ds,ax
    ret
