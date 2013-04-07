@@ -151,21 +151,6 @@ callMainMenu:
    ;no return because this procedure was jumped to, not called
 pJdosInit endp
 
-;inputs:    none
-;outputs:   none, prints newline to screen
-pPrintNewLine proc near
-   push ax,dx
-
-   mov ah,09h
-   mov dl,0ah
-   int 10h
-   mov ah,0ah
-   int 10h
-
-   pop dx,ax
-   ret
-pPrintNewLine endp
-
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
                db 0ah, '2 - Play a song', 0ah, '3 - Memory debug', 0
 ;inputs:    none
@@ -173,13 +158,13 @@ mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light 
 pMainMenu proc near
    push ax,dx,ds
    
-   call pPrintNewLine
+   mOutputCharacter 0ah
    mov ds,romSegment
    mov dx,offset mainMenuPrompt
    mov ah,09h
    int 21h
-   mov ah,07h
-   int 21h
+   mov dx,0003h
+   call pInputOneHex
    
    pop ds,dx,ax
    ret
