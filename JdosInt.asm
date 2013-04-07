@@ -6,7 +6,7 @@ int21h proc far
 checkBackToMainMenu:
    cmp ah,00h
    jne checkInputWithEcho
-   ;TODO: write procedure to pop stack back to main program. Be careful!
+   call pForceToMainMenu
    jmp osInterruptComplete
    
 checkInputWithEcho:
@@ -32,6 +32,19 @@ checkStringOutput:
 osInterruptComplete:
    iret
 int21h endp
+
+;inputs:    none
+;outputs:   takes the stack back to the point where the main menu was called.
+pForceToMainMenu proc near
+   xor ax,ax
+findMainMenuCall:
+   pop ax
+   cmp ax,offset callMainMenu + 3
+   jne findMainMenuCall
+   
+   push ax           ;restore the return address back on the stack
+   ret               ;return to the call to the main menu
+pForceToMainMenu endp
 
 ;inputs:    none
 ;outputs:   al - input character
