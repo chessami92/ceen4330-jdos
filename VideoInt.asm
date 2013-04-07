@@ -310,7 +310,6 @@ nonNewLine:
    jns noAdjustingRowColumn
    mov dl,19         ;make end of row of last row
    add dh,numScreenLines - 1
-   call pValidateRowAndColumn
 
 noAdjustingRowColumn:
    call pConvertToRamOffset
@@ -318,8 +317,11 @@ noAdjustingRowColumn:
    push dx
    mov dl,10h
    call pOutputScreenCommand
+   sub B[currentLcdCursor],2
    mov dl,20h
    call pOutputScreenData
+   mov dl,10h
+   call pOutputScreenCommand
    pop dx
    jmp characterInRam
 

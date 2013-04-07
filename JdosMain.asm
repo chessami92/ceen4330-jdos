@@ -163,6 +163,7 @@ pPrintNewLine proc near
    int 10h
 
    pop dx,ax
+   ret
 pPrintNewLine endp
 
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
