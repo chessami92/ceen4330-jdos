@@ -166,6 +166,14 @@ pMainMenu proc near
    mov dx,0003h
    call pInputOneHex
    
+   cmp al,0
+   jne checkLightShow
+   push bx,cx
+   mov cx,4
+   call pInputManyHex
+   pop cx,bx
+checkLightShow:
+   
    pop ds,dx,ax
    ret
 pMainMenu endp

@@ -51,14 +51,7 @@ pForceToMainMenu endp
 pInputWithEcho proc near
    push dx
 
-   call pMakeCursorVisible
-   mov dl,0fh        ;display on, blinking cursor
-   call pOutputScreenCommand
-
    call pInputWithoutEcho
-
-   mov dl,0ch        ;display on, no cursor
-   call pOutputScreenCommand
 
    mov dl,al
    mov ah,09h        ;print character
@@ -73,11 +66,18 @@ pInputWithEcho endp
 pInputWithoutEcho proc near
    push dx
    
+   call pMakeCursorVisible
+   mov dl,0fh        ;display on, blinking cursor
+   call pOutputScreenCommand
+   
 inputCharacterAgain:
    xor ah,ah
    int 16h
    call pCheckSpecialCharacters
    jc inputCharacterAgain
+   
+   mov dl,0ch        ;display on, no cursor
+   call pOutputScreenCommand
 
    pop dx
    ret
