@@ -70,8 +70,8 @@ mInitializeDisplay macro
    int 10h
 #em
 
-memoryGood db ' Memory test passed ', 0
-memoryBad db  ' Memory test failed ', 0
+memoryGood db '  Memory test passed', 0
+memoryBad db  '  Memory test failed', 0
 ;inputs:    none
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
@@ -108,6 +108,7 @@ displayTestResult:
    mov ah,09h
    mov ds,romSegment
    int 21h
+   mDelayMs 500
 
    pop si,ds,dx,cx,bx,ax
    ret
@@ -137,12 +138,11 @@ pJdosInit proc far
    mInitializeInterruptController
    mInitializeKeyboard
    mInitializeDisplay
-   call pTestMemory
+   sti               ;allow interrupts now that IVT is initialized
    mOutputSplashScreen
+   call pTestMemory
    
    ;int 02h TODO: dump memory to see what is the default interrupt - should be iret
-
-   sti               ;allow interrupts now that IVT is initialized
    
 callMainMenu:
    call pMainMenu
@@ -152,7 +152,7 @@ callMainMenu:
 pJdosInit endp
 
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
-               db 0ah, '2 - Play a song', 0ah, '3 - Memory debug', 0
+               db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
@@ -165,17 +165,27 @@ pMainMenu proc near
    int 21h
    mov dx,0003h
    call pInputOneHex
-   
+
+checkNewUserGuide:
    cmp al,0
    jne checkLightShow
    call pNewUserGuide
    jmp mainMenuComplete
 checkLightShow:
    cmp al,1
-   jne checkPlaySong
+   jne checkFreeTyping
    call pMenuLedPattern
    jmp mainMenuComplete
-checkPlaySong:
+checkFreeTyping:
+   cmp al,2
+   jne checkMemoryDebug
+   mOutputCharacter 0ah
+   mov ah,01
+continueTyping:
+   int 21h
+   jmp continueTyping
+
+checkMemoryDebug:
 
 mainMenuComplete:
    pop ds,dx,ax
@@ -185,7 +195,7 @@ pMainMenu endp
 userGuide db '***New User Guide***', 'Press ', 1, ' or ', 2, ' to', 0ah, 'scroll.', 0ah
           db 'The black button', 0ah, 'above is shift.', 0ah, 'Press shift + ', 1, ' or ', 2, 'to scroll a page.', 0ah
           db 7fh, ' is backspace.', 0ah, 7eh, ' is space.', 0ah, 'The red button above', 'is ctrl.', 0ah
-          db 'Press ctrl + a to', 0ah, 'finish an entry.', 0ah, 'Press ctrl + c to', 0ah, 'return to the main', 0ah, 'menu at any time.', 0
+          db 'Press ctrl + a for', 0ah, 'enter or to confirm.', 'Press ctrl + c to', 0ah, 'return to the main', 0ah, 'menu at any time.', 0
 ;inputs:    none
 ;outputs:   none, user give a briefing on how to use the system
 pNewUserGuide proc near
@@ -204,13 +214,82 @@ waitToReturnToMenu:
    pop ds,dx,ax
 pNewUserGuide endp
 
+ledMenuPrompt db 'Press 0 or 1 to', 0ah, 'select a pattern', 0
 ;inputs:    none
 ;outputs:   none, user shown different patterns on the LEDs
 pMenuLedPattern proc near
-   push ax,bx
+   push ax,bx,cx,dx,ds
+   
+   mOutputCharacter 0ah
+   mov ds,romSegment
+   mov dx,offset ledMenuPrompt
+   mov ah,09h
+   int 21h
+
+   mov dx,0001h
+   call pInputOneHex
+
+checkPatternZero:
+   cmp al,0
+   jne checkPatternOne
+   xor ax,ax
+   xor bx,bx
+   inc bx
+   mov cx,39
+rotateLed:
+   cmp al,08h
+   clc
+   jne normalLedRotate
    xor al,al
-   mov bx,0aaaah
+   stc
+normalLedRotate:
+   rcl bx,1
+   rcl al,1
    call pOutputToLeds
-   pop bx,ax
+   mDelayMs 100
+   loop rotateLed
+   mov al,0ffh
+   mov bx,0ffffh
+   mov cx,8
+allLedFlash:
+   call pOutputToLeds
+   not al
+   not bx
+   mDelayMs 250
+   loop allLedFlash
+   jmp ledPatternComplete
+   
+checkPatternOne:
+   cmp al,1
+   jne ledPatternComplete
+   xor al,al
+   xor bx,bx
+   mov cx,256
+binaryLedCount:
+   inc bl
+   inc bh
+   inc al
+   call pOutputToLeds
+   mDelayMs 50
+   loop binaryLedCount
+   mov al,0fah
+   mov bx,0aaaah
+   mov cx,9
+halfLedFlash:
+   call pOutputToLeds
+   not al
+   not bx
+   mDelayMs 250
+   loop halfLedFlash
+   
+ledPatternComplete:  
+   shr al,1
+   rcr bx,1
+   call pOutputToLeds
+   mDelayMs 100
+   cmp bx,0
+   jne ledPatternComplete
+   
+   pop ds,dx,cx,bx,ax
    ret
 pMenuLedPattern endp

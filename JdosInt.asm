@@ -38,12 +38,17 @@ int21h endp
 pForceToMainMenu proc near
    xor ax,ax
 findMainMenuCall:
+   cmp sp,stackBegin
+   je noMainMenuYet
    pop ax
    cmp ax,offset callMainMenu + 3
    jne findMainMenuCall
    
    push ax           ;restore the return address back on the stack
    ret               ;return to the call to the main menu
+
+noMainMenuYet:
+   jmp callMainMenu
 pForceToMainMenu endp
 
 ;inputs:    none

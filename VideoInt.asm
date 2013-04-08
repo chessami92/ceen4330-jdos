@@ -331,11 +331,12 @@ noAdjustingRowColumn:
    push dx
    mov dl,10h
    call pOutputScreenCommand
-   sub B[currentLcdCursor],2
+   sub B[currentLcdCursor],1
    mov dl,20h
    call pOutputScreenData
    mov dl,10h
    call pOutputScreenCommand
+   sub B[currentLcdCursor],1
    pop dx
    jmp characterInRam
 
