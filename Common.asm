@@ -11,12 +11,29 @@ complete:
    ret
 pUpperCaseAl endp
 
+;inputs:    register/memory of hex to convert to ascii
+;outputs:   register/memory converted to ascii
 mHexToAscii macro
    add #1,30h
    cmp #1,39h
-   jbe m1
+   jbe >m1
    add #1,7h
 m1:
+#em
+
+;inputs:    register/memory to conver to printable ascii range
+;outputs:   register/memory safe to print
+mConvertToPrintable macro
+   cmp #1,20h
+   jae >m1
+   mov #1,'.'
+
+m1:
+   cmp #1,7eh
+   jbe >m2
+   mov #1,'.'
+
+m2:
 #em
 
 ;inputs:    memory/register/immediate - character to print

@@ -38,12 +38,17 @@ int21h endp
 pForceToMainMenu proc near
    xor ax,ax
 findMainMenuCall:
+   cmp sp,stackBegin
+   je noMainMenuYet
    pop ax
    cmp ax,offset callMainMenu + 3
    jne findMainMenuCall
    
    push ax           ;restore the return address back on the stack
    ret               ;return to the call to the main menu
+
+noMainMenuYet:
+   jmp callMainMenu
 pForceToMainMenu endp
 
 ;inputs:    none
@@ -52,13 +57,8 @@ pInputWithEcho proc near
    push dx
 
    call pMakeCursorVisible
-   mov dl,0fh        ;display on, blinking cursor
-   call pOutputScreenCommand
-
+   
    call pInputWithoutEcho
-
-   mov dl,0ch        ;display on, no cursor
-   call pOutputScreenCommand
 
    mov dl,al
    mov ah,09h        ;print character
@@ -73,11 +73,17 @@ pInputWithEcho endp
 pInputWithoutEcho proc near
    push dx
    
+   mov dl,0fh        ;display on, blinking cursor
+   call pOutputScreenCommand
+   
 inputCharacterAgain:
    xor ah,ah
    int 16h
    call pCheckSpecialCharacters
    jc inputCharacterAgain
+   
+   mov dl,0ch        ;display on, no cursor
+   call pOutputScreenCommand
 
    pop dx
    ret
@@ -177,3 +183,13 @@ cursorIsVisible:
    pop ds,dx,ax
    ret
 pMakeCursorVisible endp
+
+;Reset location of the 8086
+org 0fff0h
+   cli               ;make sure no interrupts while initializing
+   jmp 0f000h:offset pJdosInit
+
+org 0fff6h
+defaultInterrupt:
+   iret
+

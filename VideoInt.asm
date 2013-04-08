@@ -150,12 +150,14 @@ videoInterruptComplete:
    iret
 int10h endp
 
+customCharacterData db 48h, 04h, 0eh, 15h, 04h, 04h, 04h, 04h, 00h
+                    db 04h, 04h, 04h, 04h, 15h, 0eh, 04h, 00h, 00h
 ;inputs:    none
 ;outputs:   none, display initialized and ready to use
 pInitializeDisplay proc near
-   push dx,ds
+   push bx,cx,dx,ds
 
-   mov ds,lcdSegment
+   mov ds,romSegment
 
    mDelayMs 15       ;must to wait 15ms before setup is allowed
    
@@ -178,7 +180,19 @@ pInitializeDisplay proc near
    call pOutputScreenCommand  ;display on, no cursor
    mov dl,06h
    call pOutputScreenCommand  ;entry mode, auto-increment
-   pop dx,ds
+   
+   mov bx,offset customCharacterData
+   mov dl,[bx]
+   call pOutputScreenCommand
+   mov cx,16                  ;number of data bytes to output
+   mov dh,lcdDataBits
+outputCustomCharacter:
+   inc bx
+   mov dl,[bx]
+   call pOutputToScreen
+   mDelay40us
+   loop outputCustomCharacter
+   pop bx,cx,dx,ds
 
    push ax,cx,di,es
 
@@ -317,11 +331,12 @@ noAdjustingRowColumn:
    push dx
    mov dl,10h
    call pOutputScreenCommand
-   sub B[currentLcdCursor],2
+   sub B[currentLcdCursor],1
    mov dl,20h
    call pOutputScreenData
    mov dl,10h
    call pOutputScreenCommand
+   sub B[currentLcdCursor],1
    pop dx
    jmp characterInRam
 
