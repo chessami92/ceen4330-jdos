@@ -25,9 +25,9 @@ mLoadInterruptVectorTable macro
    mov bx,romSegment
 
 storeDefaultInformation:
-   stosb             ;store IP
+   stosw             ;store IP
    xchg ax,bx
-   stosb             ;store CS
+   stosw             ;store CS
    xchg ax,bx
    loop storeDefaultInformation
 
@@ -41,7 +41,6 @@ storeDefinedInterrupts:
    movsw
    cmp si,endInterruptTable ;see if we have reached end of IVT entries
    jne storeDefinedInterrupts
-    
 
    pop cx,bx,ax,si,di,ds,es
 #em
@@ -70,14 +69,14 @@ mInitializeDisplay macro
    int 10h
 #em
 
-memoryGood db '  Memory test passed', 0
-memoryBad db  '  Memory test failed', 0
+memoryGood db 0ah, ' Memory test passed', 0
+memoryBad db  0ah, ' Memory test failed', 0
 ;inputs:    none
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
 pTestMemory proc near
    push ax,bx,cx,dx,ds,si
-
+   
    mov ds,ramSegment ;begin at top of RAM, work way down
    xor ax,ax
    mov bx,0fffeh
@@ -114,16 +113,13 @@ displayTestResult:
    ret
 pTestMemory endp
 
-splashScreen db ' ', 18 DUP '*', ' *  CEEN 4330 2013  *','*  by Josh DeWitt  *', ' **Press any key***', 0
+splashScreen db ' ', 18 DUP '*', ' *  CEEN 4330 2013  *','*  by Josh DeWitt  *', ' ******************', 0
 mOutputSplashScreen macro
    push ax,dx,ds
    
    mov ah,09h
    mov ds,romSegment
    mov dx,offset splashScreen
-   int 21h
-
-   mov ah,07h        ;wait for a key press
    int 21h
    
    pop ds,dx,ax
@@ -141,8 +137,6 @@ pJdosInit proc far
    sti               ;allow interrupts now that IVT is initialized
    mOutputSplashScreen
    call pTestMemory
-   
-   ;int 02h TODO: dump memory to see what is the default interrupt - should be iret
    
 callMainMenu:
    call pMainMenu
@@ -174,7 +168,7 @@ checkNewUserGuide:
 checkLightShow:
    cmp al,1
    jne checkFreeTyping
-   call pMenuLedPattern
+   call pLedPatternMenu
    jmp mainMenuComplete
 checkFreeTyping:
    cmp al,2
@@ -184,8 +178,14 @@ checkFreeTyping:
 continueTyping:
    int 21h
    jmp continueTyping
-
+   
 checkMemoryDebug:
+   cmp al,3
+   jne checkPlaySong
+   call pDebugMenu
+   jmp mainMenuComplete
+   
+checkPlaySong:
 
 mainMenuComplete:
    pop ds,dx,ax
@@ -207,17 +207,18 @@ pNewUserGuide proc near
    mov ah,09h
    int 21h
 waitToReturnToMenu:
-   mov ah,07h
+   mov ah,07h        ;user should press control + c to get back to main menu
    int 21h
    jmp waitToReturnToMenu
    
    pop ds,dx,ax
+   ret
 pNewUserGuide endp
 
-ledMenuPrompt db 'Press 0 or 1 to', 0ah, 'select a pattern', 0
+ledMenuPrompt db '******LED Menu******', 'Press 0 or 1 to', 0ah, 'select a pattern.', 0
 ;inputs:    none
 ;outputs:   none, user shown different patterns on the LEDs
-pMenuLedPattern proc near
+pLedPatternMenu proc near
    push ax,bx,cx,dx,ds
    
    mOutputCharacter 0ah
@@ -292,4 +293,4 @@ ledPatternComplete:
    
    pop ds,dx,cx,bx,ax
    ret
-pMenuLedPattern endp
+pLedPatternMenu endp
