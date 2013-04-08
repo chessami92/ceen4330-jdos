@@ -1,1 +1,1 @@
-a86 JdosMain.asm Reset.asm 8086Code.bin
+a86 MIOAddr.asm IntTable.asm Common.asm Input.asm JdosMain.asm Debug.asm VideoInt.asm KeyInt.asm JdosInt.asm 8086Code.bin
