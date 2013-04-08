@@ -24,4 +24,15 @@ intControllerSegment EQU 3000h;address of interrupt controller
 intCommand1 EQU 0000h         ;offset for commands
 intCommand2 EQU 0002h         ;offset for second type of command
 
+clockSegment EQU 4000h        ;address of real time clock
+year EQU 0ffeh                ;BCD of year, 00-99
+month EQU 0ffch               ;BCD of month, 1-12
+date EQU 0ffah                ;BCD of date, 1-31
+day EQU 0ff8h                 ;day of week, 1-7
+hour EQU 0ff6h                ;hour of the day, 0-23
+minute EQU 0ff4h              ;minute of hour, 0-59
+second EQU 0ff2h              ;secodn of minute, 0-59
+control EQU 0ff0h             ;control register
+century EQU 0ffeh             ;century, 19 or 20
+
 romSegment EQU 0f000h         ;where ROM is located

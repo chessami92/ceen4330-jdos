@@ -146,7 +146,7 @@ callMainMenu:
 pJdosInit endp
 
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
-               db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0
+               db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0ah, '4 - Set system clock', 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
@@ -157,7 +157,7 @@ pMainMenu proc near
    mov dx,offset mainMenuPrompt
    mov ah,09h
    int 21h
-   mov dx,0003h
+   mov dx,0004h
    call pInputOneHex
 
 checkNewUserGuide:
@@ -178,14 +178,19 @@ checkFreeTyping:
 continueTyping:
    int 21h
    jmp continueTyping
-   
 checkMemoryDebug:
    cmp al,3
-   jne checkPlaySong
+   jne checkSetClock
    call pDebugMenu
    jmp mainMenuComplete
-   
+checkSetClock:
+   cmp al,4
+   jne checkPlaySong
+   call pSetClock
+   jmp mainMenuComplete
 checkPlaySong:
+   cmp al,5
+   jne mainMenuComplete
 
 mainMenuComplete:
    pop ds,dx,ax
@@ -294,3 +299,7 @@ ledPatternComplete:
    pop ds,dx,cx,bx,ax
    ret
 pLedPatternMenu endp
+
+pSetClock proc near
+   ret
+pSetClock endp
