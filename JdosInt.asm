@@ -51,6 +51,8 @@ pForceToMainMenu endp
 pInputWithEcho proc near
    push dx
 
+   call pMakeCursorVisible
+   
    call pInputWithoutEcho
 
    mov dl,al
@@ -66,7 +68,6 @@ pInputWithEcho endp
 pInputWithoutEcho proc near
    push dx
    
-   call pMakeCursorVisible
    mov dl,0fh        ;display on, blinking cursor
    call pOutputScreenCommand
    

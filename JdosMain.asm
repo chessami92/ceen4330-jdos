@@ -168,12 +168,49 @@ pMainMenu proc near
    
    cmp al,0
    jne checkLightShow
-   push bx,cx
-   mov cx,4
-   call pInputManyHex
-   pop cx,bx
+   call pNewUserGuide
+   jmp mainMenuComplete
 checkLightShow:
-   
+   cmp al,1
+   jne checkPlaySong
+   call pMenuLedPattern
+   jmp mainMenuComplete
+checkPlaySong:
+
+mainMenuComplete:
    pop ds,dx,ax
    ret
 pMainMenu endp
+
+userGuide db '***New User Guide***', 'Press ', 1, ' or ', 2, ' to', 0ah, 'scroll.', 0ah
+          db 'The black button', 0ah, 'above is shift.', 0ah, 'Press shift + ', 1, ' or ', 2, 'to scroll a page.', 0ah
+          db 7fh, ' is backspace.', 0ah, 7eh, ' is space.', 0ah, 'The red button above', 'is ctrl.', 0ah
+          db 'Press ctrl + a to', 0ah, 'finish an entry.', 0ah, 'Press ctrl + c to', 0ah, 'return to the main', 0ah, 'menu at any time.', 0
+;inputs:    none
+;outputs:   none, user give a briefing on how to use the system
+pNewUserGuide proc near
+   push ax,dx,ds
+   
+   mOutputCharacter 0ah
+   mov ds,romSegment
+   mov dx,offset userGuide
+   mov ah,09h
+   int 21h
+waitToReturnToMenu:
+   mov ah,07h
+   int 21h
+   jmp waitToReturnToMenu
+   
+   pop ds,dx,ax
+pNewUserGuide endp
+
+;inputs:    none
+;outputs:   none, user shown different patterns on the LEDs
+pMenuLedPattern proc near
+   push ax,bx
+   xor al,al
+   mov bx,0aaaah
+   call pOutputToLeds
+   pop bx,ax
+   ret
+pMenuLedPattern endp
