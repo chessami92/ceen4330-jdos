@@ -169,8 +169,7 @@ pMakeCursorVisible proc near
    mov ds,ramSegment
    
    call pGetCursorPosition
-   add dh,1dh        ;fast way to go back 3 rows
-   call pValidateRowAndColumn
+   sub dh,03h
    mov dl,[currentPrintRow]
    
    cmp dl,dh         ;only refresh screen if necessary

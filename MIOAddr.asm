@@ -1,12 +1,11 @@
-stackBegin EQU 0fd60h         ;top of stack - goes into SP, SS = 0
+stackBegin EQU 0ebe0h         ;top of stack - goes into SP, SS = 0
 
 ;rows wrap around in memory. Multiply row * 20 to get location in memory. 
-currentLcdCursor EQU 0fd6ch   ;where the cursor is on the LCD - 0 through 79 (correct line wrapping)
-cursorColumn EQU 0fd6dh       ;location in RAM where next character will be printed
-cursorRow EQU 0fd6eh
-currentPrintRow EQU 0fd6fh    ;location in RAM of starting character on LCD - 4 rows are displayed
-screenData EQU 0fd70h         ;32 lines of 20 character, or 280h bytes of video data
-numScreenLines EQU 32
+currentLcdCursor EQU 0ebech   ;where the cursor is on the LCD - 0 through 79 (correct line wrapping)
+cursorColumn EQU 0ebedh       ;location in RAM where next character will be printed
+cursorRow EQU 0ebeeh
+currentPrintRow EQU 0ebefh    ;location in RAM of starting character on LCD - 4 rows are displayed
+screenData EQU 0ebf0h         ;256 lines of 20 characters, or 1400h bytes of video data
 
 keyboardPointers EQU 0fff0h   ;meta-data for queue
 keyboardQueue EQU 0fff1h      ;actual ascii key entry queue
