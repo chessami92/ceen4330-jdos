@@ -146,7 +146,8 @@ callMainMenu:
 pJdosInit endp
 
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
-               db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0
+               db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0ah, '4 - View date/time', 0ah,
+               db '5 - Set date/time', 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
@@ -157,7 +158,7 @@ pMainMenu proc near
    mov dx,offset mainMenuPrompt
    mov ah,09h
    int 21h
-   mov dx,0003h
+   mov dx,0005h
    call pInputOneHex
 
 checkNewUserGuide:
@@ -178,13 +179,21 @@ checkFreeTyping:
 continueTyping:
    int 21h
    jmp continueTyping
-   
 checkMemoryDebug:
    cmp al,3
-   jne checkPlaySong
+   jne checkViewDateTime
    call pDebugMenu
    jmp mainMenuComplete
-   
+checkViewDateTime:
+   cmp al,4
+   jne checkSetDateTime
+   call pViewDateTime
+   jmp mainMenuComplete
+checkSetDateTime:
+   cmp al,5
+   jne checkPlaySong
+   call pSetDateTime
+   jmp mainMenuComplete
 checkPlaySong:
 
 mainMenuComplete:
@@ -294,3 +303,127 @@ ledPatternComplete:
    pop ds,dx,cx,bx,ax
    ret
 pLedPatternMenu endp
+
+viewDateTimePrompt db 0ah, '*Current date/time**', 0
+pViewDateTime proc near
+   push ax,bx,cx,dx,ds
+   
+   mov ds,romSegment
+   mov dx,offset viewDateTimePrompt
+   mov ah,09h
+   int 21h
+   
+   mov ah,04h        ;read system date
+   int 1ah
+   mov bh,ch         ;print century
+   call pOutputBh
+   mov bh,cl         ;print year
+   call pOutputBh
+   mOutputCharacter '-'
+   mov bh,dh         ;print month
+   call pOutputBh
+   mOutputCharacter '-'
+   mov bh,dl         ;print day
+   call pOutputBh
+   
+   mOutputCharacter ' '
+   mov ah,02h        ;read system time
+   int 1ah
+   mov bh,ch         ;print hour
+   call pOutputBh
+   mOutputCharacter ':'
+   mov bh,cl         ;print minute
+   call pOutputBh
+   mOutputCharacter ':'
+   mov bh,dh
+   call pOutputBh    ;print second
+   
+   call pMakeCursorVisible
+   mDelayMs 2000
+   
+   pop ds,dx,cx,bx,ax
+   ret
+pViewDateTime endp
+
+setDateTimePrompt db 0ah, '***Set date/time****', 0
+yearPrompt   db      'Enter YYYY: ', 0
+monthPrompt  db 0ah, 'Enter MM:   ', 0
+dayPrompt    db 0ah, 'Enter DD:   ', 0
+hourPrompt   db 0ah, 'Enter hh:   ', 0
+minutePrompt db 0ah, 'Enter mm:   ', 0
+secondPrompt db 0ah, 'Enter ss:   ', 0
+pSetDateTime proc near
+   push ax,bx,cx,dx,ds
+   
+   mov ds,romSegment
+   mov dx,offset setDateTimePrompt
+   mov ah,09h
+   int 21h
+   
+   mov cx,0904       ;max character allowed is 9, input 4 characters
+   mov dx,offset yearPrompt
+inputYear:
+   int 21h
+   call pInputManyHex
+   push bx
+   mov cx,0902       ;max character allowed is 9, input 2 characters
+   mov dx,offset monthPrompt
+inputMonth:
+   int 21h
+   call pInputManyHex
+   cmp bl,12h        ;see if month is invalid
+   ja inputMonth
+   cmp bl,0
+   jz inputMonth
+   push bx
+   mov dx,offset dayPrompt
+inputDay:
+   int 21h
+   call pInputManyHex
+   cmp bl,31h        ;see if day is valid
+   ja inputDay
+   cmp bl,00h
+   jz inputDay
+   
+   mov dl,bl
+   pop bx
+   mov dh,bl
+   pop bx
+   mov cx,bx
+   mov ah,05h
+   int 1ah
+   
+   mov ah,09h        ;function code for print string function
+   mov cx,0902       ;max character allowed is 9, input 2 characters
+   mov dx,offset hourPrompt
+inputHour:
+   int 21h
+   call pInputManyHex
+   cmp bl,23h        ;see if hour is valid
+   ja inputHour
+   push bx
+   mov dx,offset minutePrompt
+inputMinute:
+   int 21h
+   call pInputManyHex
+   cmp bl,59h        ;see if minute is valid
+   ja inputMinute
+   push bx
+   mov dx,offset secondPrompt
+inputSecond:
+   int 21h
+   call pInputManyHex
+   cmp bl,59h
+   ja inputSecond
+   
+   mov dh,bl
+   pop bx
+   mov cl,bl
+   pop bx
+   mov ch,bl
+   mov ah,03h
+   int 1ah
+   
+   pop ds,dx,cx,bx,ax
+   ret
+pSetDateTime endp

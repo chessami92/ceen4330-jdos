@@ -162,7 +162,7 @@ pEditMemory proc near
    mov si,bx
    mov di,bx
    
-   mov cl,2
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    cld               ;increment on string functions
 editBytesOfMemory:
    mOutputCharacter 0ah
@@ -271,7 +271,7 @@ pPromptForSegment proc near
    mov ah,09h
    int 21h
    
-   mov cl,4
+   mov cx,0f04h      ;max character allowed is f, input 4 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax
@@ -289,7 +289,7 @@ pPromptForOffset proc near
    mov ah,09h
    int 21h
    
-   mov cl,4
+   mov cx,0f04h      ;max character allowed is f, input 4 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax
@@ -308,7 +308,7 @@ inputBlockSizeAgain:
    mov ah,09h
    int 21h
    
-   mov cl,2
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    call pInputManyHex
    cmp bx,0
    je inputBlockSizeAgain
@@ -328,7 +328,7 @@ pPromptForData proc near
    mov ah,09h
    int 21h
    
-   mov cl,2
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax
