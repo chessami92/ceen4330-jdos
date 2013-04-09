@@ -33,6 +33,21 @@ hour EQU 0ff6h                ;hour of the day, 0-23
 minute EQU 0ff4h              ;minute of hour, 0-59
 second EQU 0ff2h              ;secodn of minute, 0-59
 control EQU 0ff0h             ;control register
-century EQU 0ffeh             ;century, 19 or 20
+century EQU 0feeh             ;century, 19 or 20
 
 romSegment EQU 0f000h         ;where ROM is located
+
+;each mapping in this table takes 5 bytes: 1 for which interrupt,
+;4 for the CS and IP of the interrupt
+interruptTable:
+   db 09h,           ;keyboard hardware
+   dw int09h, 0f000h,
+   db 10h            ;print screen
+   dw int10h, 0f000h
+   db 16h,           ;keyboard service
+   dw int16h, 0f000h,
+   db 1ah,           ;real time clock
+   dw int1ah, 0f000h,
+   db 21h,           ;JDOS function calls
+   dw int21h, 0f000h
+endInterruptTable:

@@ -5,7 +5,10 @@ clockReadBit EQU 40h
 
 ;inputs:    ah - function code
 ;outputs:   depends on function
-int1Ah proc far
+int1ah proc far
+   push ds
+   
+   mov ds,clockSegment
 checkReadClockTime:
    cmp ah,02h
    jne checkSetClockTime
@@ -23,22 +26,20 @@ checkReadClockDate:
    jmp timeInterruptComplete
 checkSetClockDate:
    cmp ah,05h
-   jne osInterruptComplete
+   jne timeInterruptComplete
    call pSetClockDate
    jmp timeInterruptComplete
 
 timeInterruptComplete:
+   pop ds
    iret 
 int1Ah endp
 
-;inputs:    none
+;inputs:    ds - segment of RTC
 ;outputs:   ch - hours
 ;           cl - minutes
 ;           dh - seconds
 pReadClockTime proc near
-   push ds
-   
-   mov ds,clockSegment
    mov B[control],clockReadBit 
 
    mov ch,[hour]
@@ -49,44 +50,35 @@ pReadClockTime proc near
    and dh,7fh
    
    mov B[control],00h
-
-   pop ds
    ret
 pReadClockTime endp
 
-;inputs:    ch - hours
+;inputs:    ds - segment of RTC
+;           ch - hours
 ;           cl - minutes
 ;           dh - seconds
 ;outputs:   none
 pSetClockTime proc near
-   push ds
-
-   mov ds,clockSegment
    mov B[control],clockWriteBit
 
    and ch,3fh
    mov [hour],ch
    and cl,7fh
    mov [minute],cl
-   or dh,80h
+   and dh,7fh
    mov [second],dh
 
    mov B[control],00h
-
-   pop ds
    ret
 pSetClockTime endp
 
-;inputs:    none
+;inputs:    ds - segment of RTC
 ;outputs:   ch - century (19 or 20)
 ;           cl - year
 ;           dh - month
 ;           dl - date
 ;           cf - 0 if clock operating, otherwise 1
 pReadClockDate proc near
-   push ds
-
-   mov ds,clockSegment
    mov B[control],clockReadBit 
 
    mov ch,[century]
@@ -97,23 +89,19 @@ pReadClockDate proc near
    and dl,3fh
    
    mov B[control],00h
-   
-   pop ds
    ret
 pReadClockData endp
 
-;inputs:    ch - century
+;inputs:    ds - segment of RTC
+;           ch - century
 ;           cl - year
 ;           dh - month
 ;           dl - date
 ;outputs:   none
 pSetClockDate proc near
-   push ds
-
-   mov ds,clockSegment
    mov B[control],clockWriteBit
    
-   mov [century],dh
+   mov [century],ch
    mov [year],cl
    and dh,1fh
    mov [month],dh
@@ -121,7 +109,5 @@ pSetClockDate proc near
    mov [date],dl
 
    mov B[control],00h
-
-   pop ds
    ret
 pSetClockDate endp
