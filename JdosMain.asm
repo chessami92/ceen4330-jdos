@@ -438,7 +438,8 @@ inputSecond:
 pSetDateTime endp
 
 playSongPrompt db '*****Play Song******', 'Hit any key 0-f', 0ah, 'ctrl + c to exit', 0
-toneArray db 250, 230, 210, 190, 170, 150, 130, 110, 90, 75, 65, 55, 45, 40, 35, 30
+toneArray db 191, 180, 170, 161, 152, 143, 135, 128 
+          db 120, 114, 107, 101,  96,  90,  85,  80
 pPlaySong proc near
    push ax,bx,cx,dx,ds
    
