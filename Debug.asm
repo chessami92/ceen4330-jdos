@@ -50,6 +50,7 @@ debugMenuComplete:
 pDebugMenu endp
 
 dumpMemoryHeader db 0ah, '****Dump Memory*****', 0
+toolTip db 0ah, 'Press space for next', 'or ctrl + c to exit', 0
 pDumpMemory proc near
    push ax,bx,cx,ds,si
    
@@ -59,9 +60,15 @@ pDumpMemory proc near
    int 21h
    
    call pPromptForSegment
-   mov ds,bx
+   push bx
    call pPromptForOffset
    mov si,bx
+   
+   mov dx,offset toolTip
+   int 21h
+   mDelayMs 2000
+   
+   pop ds
    
 dumpSixteenBytes:
    mOutputCharacter 0ah
@@ -96,8 +103,8 @@ printAsciiBytes:
    call pMakeCursorVisible
    mov ah,0ah
    int 10h
-   mov ah,07h
-   int 21h
+   mov dx,1000h
+   call pInputOneHex
    jmp dumpSixteenBytes
    
    pop si,ds,cx,bx,ax
@@ -156,13 +163,20 @@ pEditMemory proc near
    int 21h
    
    call pPromptForSegment
-   mov ds,bx         ;set up ds:si and es:di for stosb and lodsb
-   mov es,bx
+   push bx           ;set up ds:si and es:di for stosb and lodsb
    call pPromptForOffset
    mov si,bx
    mov di,bx
    
-   mov cl,2
+   mov dx,offset toolTip
+   int 21h
+   mDelayMs 2000
+   
+   pop bx
+   mov ds,bx
+   mov es,bx
+   
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    cld               ;increment on string functions
 editBytesOfMemory:
    mOutputCharacter 0ah
@@ -271,7 +285,7 @@ pPromptForSegment proc near
    mov ah,09h
    int 21h
    
-   mov cl,4
+   mov cx,0f04h      ;max character allowed is f, input 4 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax
@@ -289,7 +303,7 @@ pPromptForOffset proc near
    mov ah,09h
    int 21h
    
-   mov cl,4
+   mov cx,0f04h      ;max character allowed is f, input 4 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax
@@ -308,7 +322,7 @@ inputBlockSizeAgain:
    mov ah,09h
    int 21h
    
-   mov cl,2
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    call pInputManyHex
    cmp bx,0
    je inputBlockSizeAgain
@@ -328,7 +342,7 @@ pPromptForData proc near
    mov ah,09h
    int 21h
    
-   mov cl,2
+   mov cx,0f02h      ;max character allowed is f, input 2 characters
    call pInputManyHex
    
    pop ds,dx,cx,ax

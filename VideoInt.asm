@@ -196,22 +196,25 @@ outputCustomCharacter:
 
    push ax,cx,di,es
 
-   mov es,0000h
+   mov es,ramSegment
    mov di,currentLcdCursor
+   
+   xor ax,ax
+   cld               ;increment on string instructions
 
    stosb             ;current lcd location is 0
    stosw             ;cursor is at row 0, column 0
    stosb             ;current row is 0
 
    mov ax,2020h      ;set all display bytes to space
-   mov cx,140h
+   mov cx,0a00h
    rep stosw
 
    pop es,di,cx,ax
    ret
 pInitializeDisplay endp
 
-;inputs:    dh - row (00h is top, 1fh is bottom)
+;inputs:    dh - row (00h is top, ffh is bottom)
 ;           dl - column (0-19)
 ;outputs:   cursor changed to position dh:dl
 ;           screen updated if cursor not present on current rows
@@ -249,8 +252,7 @@ pScrollWindowUp proc near
 
 scrollWindowUp:
    mov dh,[currentPrintRow]
-   add dh,numScreenLines - 1
-   call pValidateRowAndColumn
+   dec dh
 
    mov bx,dx         ;see if trying to look past end of buffer
    call pGetCursorPosition
@@ -276,12 +278,10 @@ pScrollWindowDown proc near
 scrollWindowDown:
    mov dh,[currentPrintRow]
    inc dh
-   call pValidateRowAndColumn
 
    mov bx,dx         ;see if already at newest part of buffer
    call pGetCursorPosition
-   add dh,numScreenLines - 2
-   call pValidateRowAndColumn
+   sub dh,02h
    cmp dh,bh
    je cannotScrollForward
    mov [currentPrintRow],bh
@@ -323,7 +323,7 @@ nonNewLine:
    sub dl,1          ;make last character a space
    jns noAdjustingRowColumn
    mov dl,19         ;make end of row of last row
-   add dh,numScreenLines - 1
+   dec dh
 
 noAdjustingRowColumn:
    call pConvertToRamOffset
@@ -411,15 +411,6 @@ adjustCursorColumn:
    jae adjustCursorColumn
 
 validCursorColumn:
-   cmp dh,20h
-   jb validCursorRow
-   
-adjustCursorRow:
-   sub dh,20h
-   cmp dh,20h
-   jae adjustCursorRow
-
-validCursorRow:
    ret
 pValidateRowAndColumn endp
 

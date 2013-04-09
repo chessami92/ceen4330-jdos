@@ -80,6 +80,7 @@ doneInputOneHex:
 pInputOneHex endp
 
 ;inputs:    cl - number of characters to input
+;           ch - the maximum number allowed (0-f)
 ;outputs:   bx - the inputted characters in hex format
 ;              characters echoed to screen
 ;           cf - set if user hit space to exit
@@ -87,10 +88,11 @@ pInputManyHex proc near
    push ax,cx,dx
    
    xor bx,bx
+   mov dl,ch
    mov ch,cl         ;to know if at beginning of input
    
 inputNextCharacter:
-   mov dx,0a00fh
+   mov dh,0a0h
    cmp cl,ch
    jne notAtBeginningOfInput
    and dh,0dfh        ;disable backspace
