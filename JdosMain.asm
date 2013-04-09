@@ -75,6 +75,7 @@ memoryBad db  0ah, ' Memory test failed', 0
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
 pTestMemory proc near
+   cli               ;prevent user from using ^C
    push ax,bx,cx,dx,ds,si
    
    mov ds,ramSegment ;begin at top of RAM, work way down
@@ -110,6 +111,7 @@ displayTestResult:
    mDelayMs 500
 
    pop si,ds,dx,cx,bx,ax
+   sti
    ret
 pTestMemory endp
 
@@ -147,7 +149,8 @@ pJdosInit endp
 
 mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light show'
                db 0ah, '2 - Free typing', 0ah, '3 - Memory debug', 0ah, '4 - View date/time', 0ah,
-               db '5 - Set date/time', 0
+               db '5 - Set date/time', 0ah, '6 - Play song ', 0
+freeTypingPrompt db '****Free Typing*****', 'ctrl + c to exit', 0ah, 0
 ;inputs:    none
 ;outputs:   none
 pMainMenu proc near
@@ -158,7 +161,7 @@ pMainMenu proc near
    mov dx,offset mainMenuPrompt
    mov ah,09h
    int 21h
-   mov dx,0005h
+   mov dx,0006h
    call pInputOneHex
 
 checkNewUserGuide:
@@ -175,6 +178,9 @@ checkFreeTyping:
    cmp al,2
    jne checkMemoryDebug
    mOutputCharacter 0ah
+   mov dx,offset freeTypingPrompt
+   mov ah,09h
+   int 21h
    mov ah,01
 continueTyping:
    int 21h
@@ -195,6 +201,9 @@ checkSetDateTime:
    call pSetDateTime
    jmp mainMenuComplete
 checkPlaySong:
+   cmp al,6
+   jne mainMenuComplete
+   call pPlaySong
 
 mainMenuComplete:
    pop ds,dx,ax
@@ -427,3 +436,58 @@ inputSecond:
    pop ds,dx,cx,bx,ax
    ret
 pSetDateTime endp
+
+playSongPrompt db '*****Play Song******', 'Hit any key 0-f', 0ah, 'ctrl + c to exit', 0
+toneArray db 191, 180, 170, 161, 152, 143, 135, 128 
+          db 120, 114, 107, 101,  96,  90,  85,  80
+pPlaySong proc near
+   push ax,bx,cx,dx,ds
+   
+   mOutputCharacter 0ah
+   mov ds,romSegment
+   mov dx,offset playSongPrompt
+   mov ah,09h        
+   int 21h
+
+playAnotherNote:
+   mov dx,000fh      ;normal user input, 0-f   
+   call pInputOneHex
+   xor bx,bx
+   mov bl,al
+   
+   xor cx,cx
+   mov cl,[offset toneArray + bx]
+   mov ax,10000
+   xor dx,dx
+   div cx
+   mov bx,ax
+   
+playNote:
+   call pOneIteration
+   dec bx
+   jnz playNote
+   jmp playAnotherNote
+   
+   pop ds,dx,cx,bx,ax
+   ret
+pPlaySong endp
+
+pOneIteration proc near
+   push ds,cx
+   
+   mov ds,lcdSegment
+   mov B[lcdOffset],80h
+l1:
+   call pDelay10us
+   loop l1
+   
+   mov B[lcdOffset],00h
+   pop cx
+   push cx
+l2:
+   call pDelay10us
+   loop l2
+   
+   pop cx,ds
+   ret
+pOneIteration endp
