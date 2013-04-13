@@ -259,6 +259,7 @@ pFindInMemory proc near
    jmp findInMemoryComplete
    
 dataFoundInMemory:
+   dec si            ;adjust because repne goes one too far
    mov dx,offset foundMessage
    int 21h
    push ds,si
