@@ -152,6 +152,10 @@ waitForCharacter:
    call pGetKeyboardPointers
    inc bl            ;point to next character
    mov ax,bx
+   cmp al,0fh
+   jne noAlAdjust
+   xor al,al
+noAlAdjust:
    call pSetKeyboardPointers
    call pGetKeyboardPointers
    cmp ax,bx         ;pSetKeyboardPointers didn't work, queue must be empty
