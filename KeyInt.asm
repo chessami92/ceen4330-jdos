@@ -22,6 +22,7 @@ pGetKeyboardPointers endp
 ;inputs:    bh - head of queue
 ;           bl - tail of queue
 ;outputs:   none, stored back in memory in proper format
+;calls:     none
 pSetKeyboardPointers proc near
    push bx,ds
    
@@ -54,6 +55,7 @@ pSetKeyboardPointers endp
 
 ;inputs:    dl - the new character
 ;outputs:   queue is updated with new character if possible
+;calls:     pGetKeyboardPointers, pSetKeyboardPointers
 mInsertIfNotFull macro
    push bx,ds
    
@@ -77,6 +79,7 @@ scanAsciiTable db 08h, '){} ~~~&*BA(~~~$%DC^~~~!@FE#~~~', 08h, '0[] ~~~78ba9~~~4
 ;called by hardware when character is available
 ;inputs:    none
 ;outputs:   queue is updated with new character
+;calls:     int 21h - return to main program function, mInsertIfNotFull
 int09h proc far
    push bx,dx,ds
 
@@ -140,6 +143,7 @@ int16h endp
 
 ;inputs:    none
 ;outputs:   al - ASCII character
+;calls:     pGetKeyboardPointers, pSetKeyboardPointers
 pReadCharacter proc near
    push bx,ds
 
@@ -152,6 +156,10 @@ waitForCharacter:
    call pGetKeyboardPointers
    inc bl            ;point to next character
    mov ax,bx
+   cmp al,0fh
+   jne noAlAdjust
+   xor al,al
+noAlAdjust:
    call pSetKeyboardPointers
    call pGetKeyboardPointers
    cmp ax,bx         ;pSetKeyboardPointers didn't work, queue must be empty
@@ -166,6 +174,7 @@ pReadCharacter endp
 
 ;inputs:    none
 ;outputs:   none, 8279 initialized
+;calls:     none
 pInitializeKeyboard proc near
    push ax,ds
 

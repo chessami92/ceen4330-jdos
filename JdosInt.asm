@@ -34,7 +34,8 @@ osInterruptComplete:
 int21h endp
 
 ;inputs:    none
-;outputs:   takes the stack back to the point where the main menu was called.
+;outputs:   takes the stack back to the point where the main menu was called
+;calls:     none
 pForceToMainMenu proc near
    xor ax,ax
 findMainMenuCall:
@@ -53,6 +54,7 @@ pForceToMainMenu endp
 
 ;inputs:    none
 ;outputs:   al - input character
+;calls:     pMakeCursorVisible, pInputWithoutEcho, int 10h - print character function
 pInputWithEcho proc near
    push dx
 
@@ -70,6 +72,7 @@ pInputWithEcho endp
 
 ;inputs:    none
 ;outputs:   al - input character
+;calls:     pOutputScreenCommand, pCheckSpecialCharacters, pOutputScreenCommand
 pInputWithoutEcho proc near
    push dx
    
@@ -91,6 +94,7 @@ pInputWithoutEcho endp
 
 ;inputs:    ds:dx - string address
 ;outputs:   none - prints until a null byte is encountered
+;calls:     pMakeCursorVisible, int 10h - print character function, int 10h - refresh screen function
 pStringOutput proc near
    push ax,si,dx
    
@@ -130,6 +134,7 @@ pStringOutput endp
 
 ;inputs:    al - inputted character
 ;outputs:   carry flag set if it was a special keystroke
+;calls:     int 10h - screll screen function, int 10h - refresh screen function
 pCheckSpecialCharacters proc near
    push ax,bx
    
@@ -163,6 +168,7 @@ pCheckSpecialCharacters endp
 
 ;inputs:    none
 ;outputs:   none, RAM pointers updated as appropriate
+;calls:     pGetCursorPosition, int 10h - scroll screen function
 pMakeCursorVisible proc near
    push ax,dx,ds
    

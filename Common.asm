@@ -1,5 +1,6 @@
 ;inputs:    al
 ;outputs:   al, converted to uppercase
+;calls:     none
 pUpperCaseAl proc near
    cmp al,61h
    jb complete
@@ -13,6 +14,7 @@ pUpperCaseAl endp
 
 ;inputs:    register/memory of hex to convert to ascii
 ;outputs:   register/memory converted to ascii
+;calls:     none
 mHexToAscii macro
    add #1,30h
    cmp #1,39h
@@ -22,7 +24,8 @@ m1:
 #em
 
 ;inputs:    register/memory to conver to printable ascii range
-;outputs:   register/memory safe to print
+;outputs:   same register/memory, safe to print
+;calls:     none
 mConvertToPrintable macro
    cmp #1,20h
    jae >m1
@@ -38,6 +41,7 @@ m2:
 
 ;inputs:    memory/register/immediate - character to print
 ;outputs:   none, character printed to screen
+;calls:     int 10h - print character
 mOutputCharacter macro
    push ax,dx
 
@@ -50,25 +54,25 @@ mOutputCharacter macro
 
 ;inputs:    none
 ;outputs:   none, reuturns after 10us
+;calls:     none
 pDelay10us proc near
    ;total of 51 ccs
    ;initial call takes 19ccs
-   
    nop               ;3ccs
-   nop
-   nop
-   nop
+   nop               ;3ccs
+   nop               ;3ccs
+   nop               ;3ccs
 
-   ret               ;ret takes 20ccs
+   ret               ;20ccs
 pDelay10us endp
 
 msDelay EQU 73
 ;inputs:    none
 ;outputs:   none, continues after 1ms
+;calls:     pDelay10us
 pDelay1ms proc near
    ;total of 5000 ccs
    ;initial call takes 19ccs
-
    push cx           ;11ccs
 
    mov cx,msDelay    ;4ccs
@@ -77,11 +81,12 @@ tenUsDelay:
    loop tenUsDelay   ;17/5ccs
 
    pop cx            ;8ccs
-   ret               ;ret takes 20ccs
+   ret               ;20ccs
 pDelay1ms endp
 
 ;inputs:    cx - number of ms to wait
 ;outputs:   none, returns after cx ms
+;calls:     pDelay1ms
 pDelayMs proc near
    push cx
 
@@ -95,6 +100,7 @@ delayMs endp
 
 ;inputs:    none
 ;outputs:   none, returns after 40us
+;calls:     pDelay10us
 mDelay40us macro
    call pDelay10us
    call pDelay10us
@@ -102,8 +108,9 @@ mDelay40us macro
    call pDelay10us
 #em
 
-;inputs:    number - how many ms to delay
+;inputs:    word memory/register/immediate - how many ms to delay
 ;outputs:   none, returns after number ms
+;calls:     pDelayMs
 mDelayMs macro
    push cx
    mov cx,#1
@@ -114,6 +121,7 @@ mDelayMs macro
 ;inputs:    bx - lower 16 bits of pattern
 ;           al - lower nibble is most significant 4 bits
 ;outputs:   pattern displayed to LEDs
+;calls:     none
 pOutputToLeds proc near
    push ds
 
