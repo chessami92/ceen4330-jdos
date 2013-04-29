@@ -1,6 +1,7 @@
 ;inputs:    none
 ;outputs:   ss - set to a valid point in ram
 ;           sp - points
+;calls:     none
 mInitializeStackPointer macro
    xor ax,ax         ;stack segment in RAM
    mov ss,ax
@@ -8,7 +9,8 @@ mInitializeStackPointer macro
 #em
 
 ;inputs:    none
-;outputs:   none
+;outputs:   none, interrupt table initialized
+;calls:     none
 mLoadInterruptVectorTable macro
    push es,ds,di,si,ax,bx,cx
 
@@ -45,6 +47,9 @@ storeDefinedInterrupts:
    pop cx,bx,ax,si,di,ds,es
 #em
 
+;inputs:    none
+;outputs:   none, interrupt controller initialized
+;calls:     none
 mInitializeInterruptController macro
    push ds
 
@@ -59,11 +64,17 @@ mInitializeInterruptController macro
    pop ds
 #em
 
+;inputs:    none
+;outputs:   none, keyboard initialized
+;calls:     int 16h - initialize keyboard
 mInitializeKeyboard macro
    mov ah,04h
    int 16h
 #em
 
+;inputs:    none
+;outputs:   none, LCD initialized
+;calls:     int 10h - initialize display 
 mInitializeDisplay macro
    xor ah,ah
    int 10h
@@ -74,6 +85,7 @@ memoryBad db  0ah, ' Memory test failed', 0
 ;inputs:    none
 ;outputs:   none - memory checked by storing words on both even and odd addresses.
 ;              If bad, it is printed on the LCD, likewise for good
+;calls:     pOutputToLeds, int 21h - print string function
 pTestMemory proc near
    cli               ;prevent user from using ^C
    push ax,bx,cx,dx,ds,si
@@ -116,6 +128,9 @@ displayTestResult:
 pTestMemory endp
 
 splashScreen db ' ', 18 DUP '*', ' *  CEEN 4330 2013  *','*  by Josh DeWitt  *', ' ******************', 0
+;inputs:    none
+;outputs:   none, splash screen displayed
+;calls:     int 21h - print string function
 mOutputSplashScreen macro
    push ax,dx,ds
    
@@ -129,7 +144,8 @@ mOutputSplashScreen macro
 
 ;First point of entry for the microprocessor.
 ;inputs:    none
-;outputs:   none
+;outputs:   none, never returns, calls the main menu repeatedly
+;calls:     all initialization macros listed above, pTestMemory, pMainMenu
 pJdosInit proc far
    mInitializeStackPointer
    mLoadInterruptVectorTable
@@ -153,6 +169,8 @@ mainMenuPrompt db '*****Main Menu******', '0 - New user guide', 0ah, '1 - Light 
 freeTypingPrompt db '****Free Typing*****', 'ctrl + c to exit', 0ah, 0
 ;inputs:    none
 ;outputs:   none
+;calls:     int 21h - print string function, int 21h - input with echo, pInputOneHex, 
+;           pNewUserGuide, pLedPatternMenu, pDebugMenu, pViewDateTime, pSetDateTime, pPlaySong
 pMainMenu proc near
    push ax,dx,ds
    
@@ -216,6 +234,7 @@ userGuide db '***New User Guide***', 'Press ', 1, ' or ', 2, ' to', 0ah, 'scroll
           db 'Press ctrl + a for', 0ah, 'enter or to confirm.', 'Press ctrl + c to', 0ah, 'return to the main', 0ah, 'menu at any time.', 0
 ;inputs:    none
 ;outputs:   none, user give a briefing on how to use the system
+;calls:     int 21h - print string function, int 21h - input without echo
 pNewUserGuide proc near
    push ax,dx,ds
    
@@ -236,6 +255,7 @@ pNewUserGuide endp
 ledMenuPrompt db '******LED Menu******', 'Press 0 or 1 to', 0ah, 'select a pattern.', 0
 ;inputs:    none
 ;outputs:   none, user shown different patterns on the LEDs
+;calls:     int 21h - print string function, pInputOneHex, pOutputToLeds, mDelayMs
 pLedPatternMenu proc near
    push ax,bx,cx,dx,ds
    
@@ -313,6 +333,9 @@ ledPatternComplete:
    ret
 pLedPatternMenu endp
 
+;inputs:    none
+;outputs:   none, date and time printed to screen
+;calls:     int 21h - print string function, pOutputBh, mOutputCharacter, pMakeCursorVisible, mDelayMs
 viewDateTimePrompt db 0ah, '*Current date/time**', 0
 pViewDateTime proc near
    push ax,bx,cx,dx,ds
@@ -361,6 +384,10 @@ dayPrompt    db 0ah, 'Enter DD:   ', 0
 hourPrompt   db 0ah, 'Enter hh:   ', 0
 minutePrompt db 0ah, 'Enter mm:   ', 0
 secondPrompt db 0ah, 'Enter ss:   ', 0
+;inputs:    none
+;outputs:   none, RTC updated with the inputted information
+;calls:     int 21h - print string function, pInputManyHex, int 1ah - set date function,
+;           int 1ah - set time function
 pSetDateTime proc near
    push ax,bx,cx,dx,ds
    
@@ -440,6 +467,9 @@ pSetDateTime endp
 playSongPrompt db '*****Play Song******', 'Hit any key 0-f', 0ah, 'ctrl + c to exit', 0
 toneArray db 191, 180, 170, 161, 152, 143, 135, 128 
           db 120, 114, 107, 101,  96,  90,  85,  80
+;inputs:    none
+;outputs:   none
+;calls:     int 21h - print string function, mOutputCharacter, pInputOneHex, pOneIteration
 pPlaySong proc near
    push ax,bx,cx,dx,ds
    
@@ -472,6 +502,9 @@ playNote:
    ret
 pPlaySong endp
 
+;inputs:    cx - how many 10us waits between speaker pulses
+;outputs:   none, speaker sounded
+;calls:     pDelay10us
 pOneIteration proc near
    push ds,cx
    
